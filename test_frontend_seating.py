@@ -20,11 +20,28 @@ def get_row_letter(r):
     second = alphabet[r % len(alphabet)]
     return f"{first}{second}"
 
+def get_normalized_total_seats(total_seats):
+    if total_seats <= 0:
+        return 0
+    if total_seats > 120:
+        if total_seats <= 24:
+            return 24
+        rem = (total_seats - 24) % 20
+        if rem == 0:
+            return total_seats
+        return total_seats + (20 - rem)
+    else:
+        rem = total_seats % 10
+        if rem == 0:
+            return total_seats
+        return total_seats + (10 - rem)
+
 def simulate_frontend_render_seat_grid(total_seats):
     """
     Exact simulation of renderSeatGrid in app.js:
     Returns the list of seat IDs generated as clickable buttons.
     """
+    total_seats = get_normalized_total_seats(total_seats)
     generated_seats = []
     is_imax = total_seats > 120
 
@@ -73,15 +90,16 @@ for cap in test_capacities:
     is_imax = cap > 120
     layout_name = "IMAX" if is_imax else "non-IMAX"
     
-    count_matches = len(frontend) == cap
+    norm_cap = get_normalized_total_seats(cap)
+    count_matches = len(frontend) == norm_cap
     expected_matches = (frontend == expected)
-    no_duplicates = len(set(frontend)) == cap
+    no_duplicates = len(set(frontend)) == norm_cap
     
     status = "PASS" if (count_matches and expected_matches and no_duplicates) else "FAIL"
     if status == "FAIL":
         all_ok = False
         
-    print(f"[{status}] Capacity {cap:3d} ({layout_name:8s}) -> Count: {len(frontend)}/{cap} | Identical to Backend: {expected_matches}")
+    print(f"[{status}] Input Cap {cap:3d} -> Normalized Full Rows: {norm_cap:3d} ({layout_name:8s}) -> Count: {len(frontend)} | Identical to Backend: {expected_matches}")
     if not expected_matches:
         diff_missing = set(expected) - set(frontend)
         diff_extra = set(frontend) - set(expected)

@@ -39,30 +39,32 @@ print("\n[SECTION 1] MANDATORY IMAX SEATING THRESHOLD TESTS")
 print("Rule: total_seats > 120 -> IMAX layout | total_seats <= 120 -> non-IMAX layout")
 
 cases = [
-    (80, False, "8 rows x 10 seats"),
-    (100, False, "10 rows x 10 seats"),
-    (120, False, "12 rows x 10 seats (A1-L10)"),
-    (121, True, "Row A: 24, Rows B-E: 20 each, Row F: 17"),
-    (150, True, "Row A: 24, Rows B-G: 20 each, Row H: 6"),
-    (200, True, "Row A: 24, Rows B-I: 20 each, Row J: 16")
+    (80, 80, False, "8 rows x 10 seats"),
+    (100, 100, False, "10 rows x 10 seats"),
+    (112, 120, False, "112 normalized to 120 (12 full rows x 10 seats)"),
+    (120, 120, False, "12 rows x 10 seats (A1-L10)"),
+    (121, 124, True, "121 normalized to 124 (Row A: 24, Rows B-F: 20 each)"),
+    (140, 144, True, "140 normalized to 144 (Row A: 24, Rows B-G: 20 each)"),
+    (150, 164, True, "150 normalized to 164 (Row A: 24, Rows B-H: 20 each)"),
+    (200, 204, True, "200 normalized to 204 (Row A: 24, Rows B-J: 20 each)")
 ]
 
-for count, expected_imax, note in cases:
+for count, expected_normalized, expected_imax, note in cases:
     seats = main.get_seat_names(count)
     is_imax = count > 120
     
     check(f"Threshold {count} seats layout detection", is_imax == expected_imax, f"Is IMAX: {is_imax}")
-    check(f"Threshold {count} exact count", len(seats) == count, f"{len(seats)} seats generated")
-    check(f"Threshold {count} unique seats (no duplicates)", len(set(seats)) == count)
+    check(f"Threshold {count} auto-fills complete rows", len(seats) == expected_normalized, f"{len(seats)} seats generated (expected {expected_normalized})")
+    check(f"Threshold {count} unique seats (no duplicates)", len(set(seats)) == expected_normalized)
 
 # Boundary checks
 seats_120 = main.get_seat_names(120)
 check("120 seats ends at L10", seats_120[-1] == "L10", f"End: {seats_120[-1]}")
 check("120 seats row A has exactly 10 seats (A1-A10)", "A10" in seats_120 and "A11" not in seats_120)
 
-seats_121 = main.get_seat_names(121)
-check("121 seats has Row A of 24 (A1-A24)", "A24" in seats_121 and "A25" not in seats_121)
-check("121 seats ends at F17", seats_121[-1] == "F17", f"End: {seats_121[-1]}")
+seats_140 = main.get_seat_names(140)
+check("140 seats normalized to 144 ends at G20", seats_140[-1] == "G20", f"End: {seats_140[-1]}")
+check("140 seats row A has 24 seats (A1-A24)", "A24" in seats_140 and "A25" not in seats_140)
 
 # ─────────────────────────────────────────────────────────────────
 # 2. DATABASE & MOVIE CATALOG TESTS
@@ -227,7 +229,7 @@ try:
 
     # Verify IMAX threshold on newly created movie
     added_seat_map = main.get_showtime_seats(new_st[0]["id"], db)
-    check("150-seat movie correctly detected as IMAX capacity", added_seat_map["total_seats"] == 150)
+    check("150-seat movie normalized to full rows IMAX capacity", added_seat_map["total_seats"] == 164)
     check("Row A has 24 seats", "A24" in added_seat_map["seats"] and "A25" not in added_seat_map["seats"])
 
     # Delete movie
@@ -252,6 +254,31 @@ check("read_app_js() resolves app.js", os.path.exists(js_res.path))
 
 html_res = main.read_root()
 check("read_root() resolves index.html", os.path.exists(html_res.path))
+
+# ─────────────────────────────────────────────────────────────────
+# 8. TARUN MASTER ADMIN AUTHORIZATION TESTS
+# ─────────────────────────────────────────────────────────────────
+print("\n[SECTION 8] TARUN MASTER ADMIN OVERVIEW TESTS")
+# Test 1: Tarun is authorized and gets other admin details
+tarun_overview = main.get_admins_overview("Tarun")
+check("get_admins_overview('Tarun') succeeds", isinstance(tarun_overview, list) and len(tarun_overview) == 3)
+admin_names = {a["username"] for a in tarun_overview}
+check("Other admins Vijay, Ravi, Karthik returned", admin_names == {"Vijay", "Ravi", "Karthik"})
+
+# Test 2: Other admins (e.g. Vijay) or non-admins are rejected with 403
+rejected_vijay = False
+try:
+    main.get_admins_overview("Vijay")
+except main.HTTPException as e:
+    rejected_vijay = (e.status_code == 403)
+check("get_admins_overview('Vijay') rejected with 403 Forbidden", rejected_vijay)
+
+rejected_anon = False
+try:
+    main.get_admins_overview("")
+except main.HTTPException as e:
+    rejected_anon = (e.status_code == 403)
+check("get_admins_overview('') rejected with 403 Forbidden", rejected_anon)
 
 print("\n" + "=" * 70)
 print(f"  TEST SUMMARY: {TESTS_PASSED} PASSED | {TESTS_FAILED} FAILED")

@@ -637,7 +637,30 @@ class AdminLogin(BaseModel):
 # ─────────────────────────────────────────────────────────────────
 # SEAT HELPERS
 # ─────────────────────────────────────────────────────────────────
+def normalize_seat_capacity(seats: int) -> int:
+    try:
+        seats = int(seats)
+    except (ValueError, TypeError):
+        return 0
+    if seats <= 0:
+        return 0
+    if seats > 120:
+        # IMAX: Row A has 24 seats, subsequent rows have 20 seats
+        if seats <= 24:
+            return 24
+        rem = (seats - 24) % 20
+        if rem == 0:
+            return seats
+        return seats + (20 - rem)
+    else:
+        # Non-IMAX: 10 seats per row
+        rem = seats % 10
+        if rem == 0:
+            return seats
+        return seats + (10 - rem)
+
 def get_seat_names(seat_count: int) -> List[str]:
+    seat_count = normalize_seat_capacity(seat_count)
     rows = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     seats = []
     if seat_count > 120:
@@ -821,11 +844,12 @@ def add_movie(movie: MovieCreate, db=Depends(get_db)):
         raise HTTPException(status_code=400, detail=f"Movie with ID {movie.id} already exists")
 
     try:
+        seats_capacity = normalize_seat_capacity(movie.seats_available)
         cursor.execute(
             f"INSERT INTO movies(id, name, genre, language, price, seats_available, screen_no, image_url, age_rating) "
             f"VALUES ({PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH})",
             (movie.id, movie.name, movie.genre, movie.language,
-             movie.price, movie.seats_available, movie.screen_no, movie.image_url, movie.age_rating)
+             movie.price, seats_capacity, movie.screen_no, movie.image_url, movie.age_rating)
         )
         db.commit()
 
@@ -973,7 +997,7 @@ def get_showtime_seats(showtime_id: int, db=Depends(get_db)):
         raise HTTPException(status_code=404, detail="Showtime not found")
 
     movie_id = row["movie_id"]
-    seat_count = row["seats_available"]
+    seat_count = normalize_seat_capacity(row["seats_available"])
     show_date = row["show_date"]
     show_time = row["show_time"]
 
@@ -1032,7 +1056,7 @@ def book_seats(showtime_id: int, request: BookSeatsRequest, db=Depends(get_db)):
         raise HTTPException(status_code=404, detail="Showtime not found")
 
     movie_id = row["movie_id"]
-    seat_count = row["seats_available"]
+    seat_count = normalize_seat_capacity(row["seats_available"])
     valid_seats = set(get_seat_names(seat_count))
 
     requested_seats = []
@@ -1296,6 +1320,47 @@ def login_admin(admin: AdminLogin):
     if admin.username in ADMINS and ADMINS[admin.username] == admin.password:
         return {"message": "Admin login successful", "username": admin.username}
     raise HTTPException(status_code=401, detail="Invalid admin username or password")
+
+# 12. Master Admin Overview (Restricted strictly to Tarun)
+@app.get("/admins/overview")
+def get_admins_overview(requester: str = ""):
+    if requester.strip().lower() != "tarun":
+        raise HTTPException(
+            status_code=403,
+            detail="Access restricted: Only Master Administrator 'Tarun' is authorized to view administrator details."
+        )
+    
+    # Return profile and access details of all other administrators
+    other_admins = [
+        {
+            "username": "Vijay",
+            "role": "Senior Systems Administrator",
+            "status": "Active",
+            "access_level": "Full Movie Catalog, Pricing & Showtime Scheduler",
+            "email": "vijay.admin@apexcinemas.com",
+            "badge": "Operations Lead",
+            "last_login": "Today at 02:15 PM"
+        },
+        {
+            "username": "Ravi",
+            "role": "Operations & Bookings Administrator",
+            "status": "Active",
+            "access_level": "Live Seat Bookings, User Ticket Cancellations & Audit Logs",
+            "email": "ravi.ops@apexcinemas.com",
+            "badge": "Floor Supervisor",
+            "last_login": "Today at 11:40 AM"
+        },
+        {
+            "username": "Karthik",
+            "role": "Screen & Seating Administrator",
+            "status": "Active",
+            "access_level": "Screen Specifications, IMAX 24-Col Setup & Capacity Config",
+            "email": "karthik.theatre@apexcinemas.com",
+            "badge": "Technical Lead",
+            "last_login": "Yesterday at 05:20 PM"
+        }
+    ]
+    return other_admins
 
 if __name__ == "__main__":
     import uvicorn

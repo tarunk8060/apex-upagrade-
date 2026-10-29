@@ -23,6 +23,24 @@ conn.commit()
 conn.close()
 
 
+def normalize_seat_capacity(seats: int) -> int:
+    seats = int(seats)
+    if seats <= 0:
+        return 0
+    if seats > 120:
+        if seats <= 24:
+            return 24
+        rem = (seats - 24) % 20
+        if rem == 0:
+            return seats
+        return seats + (20 - rem)
+    else:
+        rem = seats % 10
+        if rem == 0:
+            return seats
+        return seats + (10 - rem)
+
+
 class SeatBooking:
     def __init__(self, movie_id):
         self.movie_id = movie_id
@@ -47,7 +65,7 @@ class SeatBooking:
             conn.close()
             return
 
-        seat_count = data[0]
+        seat_count = normalize_seat_capacity(data[0])
 
         rows = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 

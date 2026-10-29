@@ -167,6 +167,14 @@ function changeTheme(themeName) {
     }
     const themeSelect = document.getElementById('theme-selector');
     if (themeSelect) themeSelect.value = themeName;
+    const mobileThemeIcon = document.getElementById('mobile-theme-icon');
+    if (mobileThemeIcon) {
+        if (themeName === 'light') {
+            mobileThemeIcon.className = 'fa-solid fa-moon';
+        } else {
+            mobileThemeIcon.className = 'fa-solid fa-sun';
+        }
+    }
     localStorage.setItem('preferredTheme', themeName);
 }
 
@@ -790,7 +798,26 @@ function createSeatButton(seatNo, seatNum, bookedById, isElite = false) {
     return seatBtn;
 }
 
+function getNormalizedTotalSeats(totalSeats) {
+    totalSeats = parseInt(totalSeats, 10) || 0;
+    if (totalSeats <= 0) return 0;
+    if (totalSeats > 120) {
+        // IMAX layout: Row A (24 seats), subsequent rows (20 seats each)
+        if (totalSeats <= 24) return 24;
+        const remaining = totalSeats - 24;
+        const rem = remaining % 20;
+        if (rem === 0) return totalSeats;
+        return totalSeats + (20 - rem);
+    } else {
+        // Non-IMAX layout: 10 seats per row
+        const rem = totalSeats % 10;
+        if (rem === 0) return totalSeats;
+        return totalSeats + (10 - rem);
+    }
+}
+
 function renderSeatGrid(totalSeats, seatStatesMap) {
+    totalSeats = getNormalizedTotalSeats(totalSeats);
     const gridContainer = document.getElementById('seat-layout-grid');
     gridContainer.innerHTML = '';
 
@@ -1326,6 +1353,7 @@ async function startCancellation(showtimeId, seats) {
 }
 
 function renderCancelSeatGrid(totalSeats, seatStatesMap) {
+    totalSeats = getNormalizedTotalSeats(totalSeats);
     const gridContainer = document.getElementById('cancel-seat-layout-grid');
     gridContainer.innerHTML = '';
 
@@ -1603,6 +1631,18 @@ async function loadAdminPanel() {
     const list = document.getElementById('admin-movies-list');
     list.innerHTML = '<p class="subtitle text-center">Loading database listings...</p>';
 
+    // Check if the currently logged in admin is Master Admin "Tarun"
+    const isTarun = state.currentUser && state.currentUser.role === 'admin' && (state.currentUser.username || '').toLowerCase() === 'tarun';
+    const tarunPanel = document.getElementById('tarun-admins-panel');
+    if (tarunPanel) {
+        if (isTarun) {
+            tarunPanel.classList.remove('hidden');
+            loadTarunAdminsPanel();
+        } else {
+            tarunPanel.classList.add('hidden');
+        }
+    }
+
     try {
         const movies = await apiRequest('/movies');
         state.movies = movies;
@@ -1629,6 +1669,61 @@ async function loadAdminPanel() {
         });
     } catch (err) {
         showToast('Error loading movies in admin panel: ' + err.message, 'error');
+    }
+}
+
+async function loadTarunAdminsPanel() {
+    const container = document.getElementById('tarun-admins-list');
+    if (!container) return;
+    container.innerHTML = '<p class="subtitle text-center" style="grid-column: 1 / -1; padding: 20px 0;"><i class="fa-solid fa-spinner fa-spin"></i> Loading authorized administrators...</p>';
+
+    try {
+        const username = state.currentUser ? state.currentUser.username : 'Tarun';
+        const admins = await apiRequest(`/admins/overview?requester=${encodeURIComponent(username)}`);
+
+        if (!admins || admins.length === 0) {
+            container.innerHTML = '<p class="subtitle text-center" style="grid-column: 1 / -1;">No other secondary administrators registered.</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+        admins.forEach(adm => {
+            const card = document.createElement('div');
+            card.className = 'admin-detail-card';
+            card.innerHTML = `
+                <div class="admin-card-header">
+                    <div class="admin-card-user-info">
+                        <div class="admin-card-avatar">${escapeHTML((adm.username || 'A')[0].toUpperCase())}</div>
+                        <div>
+                            <div class="admin-card-name">${escapeHTML(adm.username)}</div>
+                            <div class="admin-card-role-title">${escapeHTML(adm.role || 'Administrator')}</div>
+                        </div>
+                    </div>
+                    <span class="admin-status-pill"><i class="fa-solid fa-circle-check"></i> ${escapeHTML(adm.status || 'Active')}</span>
+                </div>
+                <div class="admin-detail-body">
+                    <div class="admin-info-item">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span><strong>Privileges:</strong> ${escapeHTML(adm.access_level || 'System Access')}</span>
+                    </div>
+                    <div class="admin-info-item">
+                        <i class="fa-solid fa-envelope"></i>
+                        <span><strong>Contact:</strong> ${escapeHTML(adm.email || 'internal@apexcinemas.com')}</span>
+                    </div>
+                    <div class="admin-info-item">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span><strong>Last Active:</strong> ${escapeHTML(adm.last_login || 'Recently active')}</span>
+                    </div>
+                    <div class="admin-info-item">
+                        <i class="fa-solid fa-id-badge"></i>
+                        <span><strong>Assignment:</strong> ${escapeHTML(adm.badge || 'Operations')}</span>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    } catch (err) {
+        container.innerHTML = `<p class="subtitle text-center text-danger" style="grid-column: 1 / -1;"><i class="fa-solid fa-triangle-exclamation"></i> Error loading administrator details: ${escapeHTML(err.message)}</p>`;
     }
 }
 
@@ -1723,6 +1818,48 @@ function escapeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
+// -------------------------------------------------------------
+// DRAG-TO-SCROLL & TOUCH SLIDING FOR SEATING MAP
+// -------------------------------------------------------------
+function enableSeatMapDragScroll(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+
+    container.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.seat')) return; // allow clicking on seats without dragging
+        isDown = true;
+        container.classList.add('active-dragging');
+        startX = e.pageX - container.offsetLeft;
+        scrollLeft = container.scrollLeft;
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isDown) {
+            isDown = false;
+            container.classList.remove('active-dragging');
+        }
+    });
+
+    container.addEventListener('mouseleave', () => {
+        if (isDown) {
+            isDown = false;
+            container.classList.remove('active-dragging');
+        }
+    });
+
+    container.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - container.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        container.scrollLeft = scrollLeft - walk;
+    });
+}
+
 // Global page load trigger
 // NOTE: Do NOT call loadCatalog() here — the user must log in first.
 // The catalog is loaded by onLoginSuccess() -> showView('catalog').
@@ -1731,42 +1868,42 @@ window.onload = () => {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('activeView');
 
-    // Initialize Carousel
-    showSlides(slideIndex);
-    // Auto-advance carousel every 5 seconds
-    setInterval(() => { changeSlide(1); }, 5000);
+    // Initialize Auto Carousel (automatic transitions every 3.5s, no dots or arrows)
+    initAutoCarousel();
+
+    // Enable smooth drag-scrolling on seat containers
+    enableSeatMapDragScroll('seat-scroll-container');
+    enableSeatMapDragScroll('cancel-seat-scroll-container');
 };
 
 // -------------------------------------------------------------
-// CAROUSEL LOGIC
+// MODERN AUTOMATIC CAROUSEL LOGIC (NO ARROWS, NO DOTS)
 // -------------------------------------------------------------
-let slideIndex = 1;
+let slideIndex = 0;
+let carouselTimer = null;
 
-function changeSlide(n) {
-    showSlides(slideIndex += n);
-}
-
-function currentSlide(n) {
-    showSlides(slideIndex = n);
-}
-
-function showSlides(n) {
-    let i;
+function showNextSlide() {
     const slides = document.getElementsByClassName("carousel-slide");
-    const dots = document.getElementsByClassName("carousel-dot");
+    if (!slides || slides.length === 0) return;
 
-    if (!slides.length) return; // if not present
-
-    if (n > slides.length) { slideIndex = 1 }
-    if (n < 1) { slideIndex = slides.length }
-    for (i = 0; i < slides.length; i++) {
+    for (let i = 0; i < slides.length; i++) {
         slides[i].classList.remove("active");
     }
-    for (i = 0; i < dots.length; i++) {
-        dots[i].classList.remove("active");
+
+    slideIndex = (slideIndex + 1) % slides.length;
+    slides[slideIndex].classList.add("active");
+}
+
+function initAutoCarousel() {
+    const slides = document.getElementsByClassName("carousel-slide");
+    if (!slides || slides.length === 0) return;
+
+    for (let i = 0; i < slides.length; i++) {
+        slides[i].classList.remove("active");
     }
-    slides[slideIndex - 1].classList.add("active");
-    if (dots.length >= slideIndex) {
-        dots[slideIndex - 1].classList.add("active");
-    }
+    slideIndex = 0;
+    slides[0].classList.add("active");
+
+    if (carouselTimer) clearInterval(carouselTimer);
+    carouselTimer = setInterval(showNextSlide, 3500);
 }

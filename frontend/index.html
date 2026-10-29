@@ -13,7 +13,7 @@
         rel="stylesheet">
     <!-- FontAwesome for cinematic iconography -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=6">
+    <link rel="stylesheet" href="style.css?v=7">
 </head>
 
 <body class="dark-theme">
@@ -170,8 +170,8 @@
             <!-- 1. CATALOG VIEW -->
             <section id="view-catalog" class="app-view active">
                 <!-- CAROUSEL -->
-                <div class="carousel-container" id="main-carousel">
-                    <div class="carousel-slide fade">
+                <div class="carousel-container modern-laptop-carousel" id="main-carousel">
+                    <div class="carousel-slide fade active">
                         <img src="https://res.cloudinary.com/mrfnjg37/image/upload/f_auto,q_auto/image_4158a38a_waurdj"
                             alt="Featured Slide 1">
                     </div>
@@ -187,18 +187,9 @@
                         <img src="https://res.cloudinary.com/mrfnjg37/image/upload/f_auto,q_auto/image_7cffa155_kzzyae"
                             alt="Featured Slide 4">
                     </div>
-                    <!-- Carousel Controls -->
-                    <button class="carousel-arrow prev" onclick="changeSlide(-1)" aria-label="Previous Slide">
-                        <i class="fa-solid fa-chevron-left"></i>
-                    </button>
-                    <button class="carousel-arrow next" onclick="changeSlide(1)" aria-label="Next Slide">
-                        <i class="fa-solid fa-chevron-right"></i>
-                    </button>
-                    <div class="carousel-dots-container">
-                        <span class="carousel-dot active" onclick="currentSlide(1)"></span>
-                        <span class="carousel-dot" onclick="currentSlide(2)"></span>
-                        <span class="carousel-dot" onclick="currentSlide(3)"></span>
-                        <span class="carousel-dot" onclick="currentSlide(4)"></span>
+                    <div class="carousel-overlay-badge">
+                        <span class="carousel-live-pill"><i class="fa-solid fa-circle-play"></i> NOW SHOWING</span>
+                        <span class="carousel-experience-text">APEX CINEMAS • IMMERSIVE SURROUND & 4K LASER</span>
                     </div>
                 </div>
 
@@ -506,6 +497,21 @@
                             <!-- Loaded dynamically via app.js -->
                         </div>
                     </div>
+
+                    <!-- 3. Tarun Master Admin: Other Administrators Panel (Visible ONLY to Tarun) -->
+                    <div id="tarun-admins-panel" class="admin-card glass-panel hidden" style="grid-column: 1 / -1;">
+                        <div class="panel-accent-bar accent-purple"></div>
+                        <div class="admin-panel-top-flex">
+                            <div>
+                                <h3 class="panel-title"><i class="fa-solid fa-user-shield"></i> Authorized System Administrators</h3>
+                                <p class="panel-subtitle">Access restricted to Master Admin Tarun — Real-time overview of active system administrators and access privileges</p>
+                            </div>
+                            <span class="badge-role-tarun"><i class="fa-solid fa-crown"></i> Master Admin Access</span>
+                        </div>
+                        <div id="tarun-admins-list" class="admins-details-grid">
+                            <!-- Populated dynamically via app.js -->
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -619,7 +625,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=6"></script>
+    <script src="app.js?v=7"></script>
 </body>
 
 </html>
