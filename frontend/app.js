@@ -855,7 +855,10 @@ function renderSeatGrid(totalSeats, seatStatesMap) {
         const remainingRows = remaining > 0 ? Math.ceil(remaining / 20) : 0;
         const totalRows = 1 + remainingRows;
 
-        for (let r = 0; r < totalRows; r++) {
+        // Cinema Seating Hierarchy: Screen is at front.
+        // Row G (or highest letter) is closest to screen (first row under screen).
+        // Row A (Elite / Midnight Blue) is at the back of the hall.
+        for (let r = totalRows - 1; r >= 0; r--) {
             const letter = getRowLetter(r);
             const rowDiv = document.createElement('div');
             rowDiv.className = 'seat-row imax-seat-row';
@@ -920,7 +923,8 @@ function renderSeatGrid(totalSeats, seatStatesMap) {
         const cols = 10;
         const totalRows = Math.ceil(totalSeats / cols);
 
-        for (let r = 0; r < totalRows; r++) {
+        // Cinema Seating Hierarchy: Highest row letter is closest to screen; Row A is at the back
+        for (let r = totalRows - 1; r >= 0; r--) {
             const letter = getRowLetter(r);
             const rowDiv = document.createElement('div');
             rowDiv.className = 'seat-row standard-seat-row';
@@ -1394,7 +1398,10 @@ function renderCancelSeatGrid(totalSeats, seatStatesMap) {
         const remainingRows = remaining > 0 ? Math.ceil(remaining / 20) : 0;
         const totalRows = 1 + remainingRows;
 
-        for (let r = 0; r < totalRows; r++) {
+        // Cinema Seating Hierarchy: Screen is at front.
+        // Row G (or highest letter) is closest to screen (first row under screen).
+        // Row A (Elite / Midnight Blue) is at the back of the hall.
+        for (let r = totalRows - 1; r >= 0; r--) {
             const letter = getRowLetter(r);
             const rowDiv = document.createElement('div');
             rowDiv.className = 'seat-row imax-seat-row';
@@ -1459,7 +1466,8 @@ function renderCancelSeatGrid(totalSeats, seatStatesMap) {
         const cols = 10;
         const totalRows = Math.ceil(totalSeats / cols);
 
-        for (let r = 0; r < totalRows; r++) {
+        // Cinema Seating Hierarchy: Highest row letter is closest to screen; Row A is at the back
+        for (let r = totalRows - 1; r >= 0; r--) {
             const letter = getRowLetter(r);
             const rowDiv = document.createElement('div');
             rowDiv.className = 'seat-row standard-seat-row';

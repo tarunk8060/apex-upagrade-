@@ -51,7 +51,8 @@ def simulate_frontend_render_seat_grid(total_seats):
         remaining_rows = (remaining + 19) // 20 if remaining > 0 else 0
         total_rows = 1 + remaining_rows
 
-        for r in range(total_rows):
+        # Cinema Hierarchy: Screen at top; Row G (highest) in front, Row A at back
+        for r in range(total_rows - 1, -1, -1):
             letter = get_row_letter(r)
             if r == 0:
                 for col in range(1, 25):
@@ -70,7 +71,7 @@ def simulate_frontend_render_seat_grid(total_seats):
     else:
         cols = 10
         total_rows = (total_seats + cols - 1) // cols
-        for r in range(total_rows):
+        for r in range(total_rows - 1, -1, -1):
             letter = get_row_letter(r)
             seats_in_this_row = (total_seats - r * cols) if (r == total_rows - 1) else cols
             for c in range(cols):
@@ -92,15 +93,18 @@ for cap in test_capacities:
     
     norm_cap = get_normalized_total_seats(cap)
     count_matches = len(frontend) == norm_cap
-    expected_matches = (frontend == expected)
+    set_matches = (set(frontend) == set(expected))
     no_duplicates = len(set(frontend)) == norm_cap
     
-    status = "PASS" if (count_matches and expected_matches and no_duplicates) else "FAIL"
+    # Verify cinema hierarchy: highest row is first (closest to screen); Row A is at the back
+    row_order_correct = frontend[-1].startswith("A")
+
+    status = "PASS" if (count_matches and set_matches and no_duplicates and row_order_correct) else "FAIL"
     if status == "FAIL":
         all_ok = False
         
-    print(f"[{status}] Input Cap {cap:3d} -> Normalized Full Rows: {norm_cap:3d} ({layout_name:8s}) -> Count: {len(frontend)} | Identical to Backend: {expected_matches}")
-    if not expected_matches:
+    print(f"[{status}] Input Cap {cap:3d} -> Normalized Full Rows: {norm_cap:3d} ({layout_name:8s}) -> Count: {len(frontend)} | Sets Match: {set_matches} | Row A at back: {row_order_correct}")
+    if not set_matches:
         diff_missing = set(expected) - set(frontend)
         diff_extra = set(frontend) - set(expected)
         print(f"       Missing: {diff_missing} | Extra: {diff_extra}")
