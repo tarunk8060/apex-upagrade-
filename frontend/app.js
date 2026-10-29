@@ -605,7 +605,12 @@ async function proceedWithBooking(movie) {
         showView('booking');
 
         // Load Receipt Details
-        document.getElementById('booking-movie-title').textContent = `Select Seats for ${movie.name}`;
+        const bookingTitleText = document.getElementById('booking-movie-title-text');
+        if (bookingTitleText) {
+            bookingTitleText.textContent = `Select Seats for ${movie.name}`;
+        } else {
+            document.getElementById('booking-movie-title').textContent = `Select Seats for ${movie.name}`;
+        }
         document.getElementById('summary-movie-name').textContent = movie.name;
         document.getElementById('summary-movie-lang').textContent = movie.language;
         document.getElementById('summary-movie-screen').textContent = movie.screen_no;
@@ -1337,7 +1342,12 @@ async function startCancellation(showtimeId, seats) {
         showView('cancel-booking');
 
         // Load Receipt Details
-        document.getElementById('cancel-booking-title').textContent = `Cancel Tickets for ${movie.name}`;
+        const cancelBookingTitleText = document.getElementById('cancel-booking-title-text');
+        if (cancelBookingTitleText) {
+            cancelBookingTitleText.textContent = `Cancel Tickets for ${movie.name}`;
+        } else {
+            document.getElementById('cancel-booking-title').textContent = `Cancel Tickets for ${movie.name}`;
+        }
         document.getElementById('cancel-summary-movie-name').textContent = movie.name;
         document.getElementById('cancel-summary-movie-date').textContent = seatData.show_date;
         document.getElementById('cancel-summary-movie-time').textContent = seatData.show_time;
@@ -1961,6 +1971,23 @@ function escapeHTML(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+// -------------------------------------------------------------
+// SEAT MAP TOUCH / QUICK SCROLL CONTROLS
+// -------------------------------------------------------------
+function scrollSeatsDirection(dx) {
+    const container = document.getElementById('seat-scroll-container');
+    if (container) {
+        container.scrollBy({ left: dx, behavior: 'smooth' });
+    }
+}
+
+function scrollCancelSeatsDirection(dx) {
+    const container = document.getElementById('cancel-seat-scroll-container');
+    if (container) {
+        container.scrollBy({ left: dx, behavior: 'smooth' });
+    }
 }
 
 // -------------------------------------------------------------

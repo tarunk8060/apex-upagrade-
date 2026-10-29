@@ -574,7 +574,41 @@ ADMINS = {
 def init_admins_table():
     global ADMINS
     try:
-        if not USE_POSTGRES:
+        defaults = [
+            ("Tarun", "tarun@80", "Master Administrator", "Full Superadmin Access & System Configuration", "tarun.master@apexcinemas.com", "Master Admin"),
+            ("Vijay", "vijay$45", "Senior Systems Administrator", "Full Movie Catalog, Pricing & Showtime Scheduler", "vijay.admin@apexcinemas.com", "Operations Lead"),
+            ("Ravi", "ravi!988", "Operations & Bookings Administrator", "Live Seat Bookings, User Ticket Cancellations & Audit Logs", "ravi.ops@apexcinemas.com", "Floor Supervisor"),
+            ("Karthik", "karthik^9876", "Screen & Seating Administrator", "Screen Specifications, IMAX 24-Col Setup & Capacity Config", "karthik.theatre@apexcinemas.com", "Technical Lead")
+        ]
+        if USE_POSTGRES:
+            import psycopg2
+            conn = psycopg2.connect(DATABASE_URL)
+            cur = conn.cursor()
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS admin_users (
+                username VARCHAR(100) PRIMARY KEY,
+                password VARCHAR(255) NOT NULL,
+                role VARCHAR(100) NOT NULL DEFAULT 'Administrator',
+                access_level VARCHAR(255) NOT NULL DEFAULT 'System Management',
+                email VARCHAR(255) DEFAULT '',
+                badge VARCHAR(100) DEFAULT 'Operations',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+            conn.commit()
+            for uname, pwd, role, access, email, badge in defaults:
+                cur.execute("""
+                INSERT INTO admin_users (username, password, role, access_level, email, badge)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (username) DO NOTHING;
+                """, (uname, pwd, role, access, email, badge))
+            conn.commit()
+
+            cur.execute("SELECT username, password FROM admin_users;")
+            for u, p in cur.fetchall():
+                ADMINS[u] = p
+            conn.close()
+        else:
             import sqlite3
             conn = sqlite3.connect(DB_PATH)
             cur = conn.cursor()
@@ -589,12 +623,7 @@ def init_admins_table():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """)
-            defaults = [
-                ("Tarun", "tarun@80", "Master Administrator", "Full Superadmin Access & System Configuration", "tarun.master@apexcinemas.com", "Master Admin"),
-                ("Vijay", "vijay$45", "Senior Systems Administrator", "Full Movie Catalog, Pricing & Showtime Scheduler", "vijay.admin@apexcinemas.com", "Operations Lead"),
-                ("Ravi", "ravi!988", "Operations & Bookings Administrator", "Live Seat Bookings, User Ticket Cancellations & Audit Logs", "ravi.ops@apexcinemas.com", "Floor Supervisor"),
-                ("Karthik", "karthik^9876", "Screen & Seating Administrator", "Screen Specifications, IMAX 24-Col Setup & Capacity Config", "karthik.theatre@apexcinemas.com", "Technical Lead")
-            ]
+            conn.commit()
             for uname, pwd, role, access, email, badge in defaults:
                 cur.execute("""
                 INSERT OR IGNORE INTO admin_users (username, password, role, access_level, email, badge)
@@ -795,6 +824,18 @@ def read_app_js():
 @app.get("/")
 def read_root():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"), headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+
+@app.get("/apex-icon.png")
+def read_apex_icon():
+    return FileResponse(os.path.join(FRONTEND_DIR, "apex-icon.png"), media_type="image/png")
+
+@app.get("/favicon.png")
+def read_favicon_png():
+    return FileResponse(os.path.join(FRONTEND_DIR, "favicon.png"), media_type="image/png")
+
+@app.get("/favicon.ico")
+def read_favicon_ico():
+    return FileResponse(os.path.join(FRONTEND_DIR, "favicon.png"), media_type="image/png")
 
 # ─────────────────────────────────────────────────────────────────
 # ROUTES
@@ -1367,10 +1408,67 @@ def login_user(user: UserLogin, db=Depends(get_db)):
 
 # 11. Login admin
 @app.post("/admins/login")
-def login_admin(admin: AdminLogin):
-    if admin.username in ADMINS and ADMINS[admin.username] == admin.password:
-        return {"message": "Admin login successful", "username": admin.username}
-    raise HTTPException(status_code=401, detail="Invalid admin username or password")
+def login_admin(admin: AdminLogin, db=Depends(get_db)):
+    raw_uname = (admin.username or "").strip()
+    pwd = (admin.password or "").strip()
+    if not raw_uname or not pwd:
+        raise HTTPException(status_code=400, detail="Username and password are required")
+
+    close_db = False
+    if not hasattr(db, "cursor"):
+        if USE_POSTGRES:
+            import psycopg2
+            db = psycopg2.connect(DATABASE_URL)
+        else:
+            import sqlite3
+            db = sqlite3.connect(DB_PATH)
+            db.row_factory = lowercase_dict_factory
+        close_db = True
+
+    try:
+        cursor = get_cursor(db)
+        ph = "%s" if USE_POSTGRES else "?"
+        
+        # Ensure admin_users table exists and query directly
+        row = None
+        try:
+            cursor.execute(f"SELECT username, password, role FROM admin_users WHERE LOWER(TRIM(username)) = LOWER({ph})", (raw_uname,))
+            row = cursor.fetchone()
+        except Exception:
+            init_admins_table()
+            cursor.execute(f"SELECT username, password, role FROM admin_users WHERE LOWER(TRIM(username)) = LOWER({ph})", (raw_uname,))
+            row = cursor.fetchone()
+
+        if row:
+            stored_pwd = row["password"] if "password" in row else row[1]
+            actual_uname = row["username"] if "username" in row else row[0]
+            role = row["role"] if "role" in row else (row[2] if len(row) > 2 else "Administrator")
+            if stored_pwd == pwd:
+                ADMINS[actual_uname] = stored_pwd
+                return {
+                    "message": "Admin login successful",
+                    "username": actual_uname,
+                    "role": role
+                }
+            else:
+                raise HTTPException(status_code=401, detail="Invalid admin username or password")
+
+        # Fallback to ADMINS dict (case-insensitive)
+        for k, v in ADMINS.items():
+            if k.strip().lower() == raw_uname.lower() and v.strip() == pwd:
+                return {
+                    "message": "Admin login successful",
+                    "username": k,
+                    "role": "Master Administrator" if k.lower() == "tarun" else "Administrator"
+                }
+
+        raise HTTPException(status_code=401, detail="Invalid admin username or password")
+    finally:
+        if close_db:
+            try:
+                db.close()
+            except Exception:
+                pass
 
 # 12. Master Admin Overview (Restricted strictly to Tarun)
 @app.get("/admins/overview")

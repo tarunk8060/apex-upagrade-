@@ -255,6 +255,15 @@ check("read_app_js() resolves app.js", os.path.exists(js_res.path))
 html_res = main.read_root()
 check("read_root() resolves index.html", os.path.exists(html_res.path))
 
+apex_icon_res = main.read_apex_icon()
+check("read_apex_icon() resolves apex-icon.png", os.path.exists(apex_icon_res.path))
+
+fav_png_res = main.read_favicon_png()
+check("read_favicon_png() resolves favicon.png", os.path.exists(fav_png_res.path))
+
+fav_ico_res = main.read_favicon_ico()
+check("read_favicon_ico() resolves favicon.png", os.path.exists(fav_ico_res.path))
+
 # ─────────────────────────────────────────────────────────────────
 # 8. TARUN MASTER ADMIN AUTHORIZATION TESTS
 # ─────────────────────────────────────────────────────────────────
@@ -322,6 +331,25 @@ try:
 except main.HTTPException as e:
     del_login_failed = (e.status_code == 401)
 check("Deleted admin login rejected with 401", del_login_failed)
+
+# Test 8: Other default admins login (case-insensitive & whitespace trimmed)
+admin_credentials_cases = [
+    ("Vijay", "vijay$45", "Vijay"),
+    ("vijay", "vijay$45", "Vijay"),
+    ("  vijay  ", "vijay$45", "Vijay"),
+    ("VIJAY", "vijay$45", "Vijay"),
+    ("Ravi", "ravi!988", "Ravi"),
+    ("ravi", "ravi!988", "Ravi"),
+    ("Karthik", "karthik^9876", "Karthik"),
+    ("karthik", "karthik^9876", "Karthik"),
+    ("Tarun", "tarun@80", "Tarun"),
+    ("tarun", "tarun@80", "Tarun")
+]
+
+for uname_input, pwd_input, expected_db_name in admin_credentials_cases:
+    req = main.AdminLogin(username=uname_input, password=pwd_input)
+    res = main.login_admin(req)
+    check(f"Admin login '{uname_input}' resolves to '{expected_db_name}'", res["username"] == expected_db_name and "role" in res)
 
 print("\n" + "=" * 70)
 print(f"  TEST SUMMARY: {TESTS_PASSED} PASSED | {TESTS_FAILED} FAILED")

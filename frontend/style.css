@@ -724,13 +724,52 @@ body {
 .booking-header {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
     margin-bottom: 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.booking-header .btn-sm,
+.booking-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 18px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.booking-header .btn-sm:hover,
+.booking-back-btn:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(229, 9, 20, 0.35);
 }
 
 .booking-movie-title {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 700;
+    margin: 0;
+    line-height: 1.25;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .booking-split-container {
@@ -835,6 +874,94 @@ body {
     user-select: none;
 }
 
+/* Brand Icon / Title Icon Styles */
+.brand-title-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(229, 9, 20, 0.4);
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.brand-title-icon-sm {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    box-shadow: 0 2px 6px rgba(229, 9, 20, 0.35);
+}
+
+.brand-title-icon-lg {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    box-shadow: 0 4px 14px rgba(229, 9, 20, 0.5);
+}
+
+.brand-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.sidebar-brand-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.seat-scroll-nav-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 12px;
+    gap: 10px;
+}
+
+.seat-scroll-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.seat-scroll-btn:hover,
+.seat-scroll-btn:active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+}
+
+.seat-scroll-hint-badge {
+    font-size: 11px;
+    color: var(--tech-blue);
+    background: rgba(0, 176, 255, 0.08);
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 176, 255, 0.2);
+    font-weight: 600;
+    text-align: center;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .seat-scroll-hint {
     display: none;
     font-size: 11px;
@@ -934,21 +1061,21 @@ body {
     box-shadow: 0 0 12px rgba(0, 176, 255, 0.45) !important;
 }
 
-/* Premium / Elite Row A Styling - Electric / Diamond Blue */
+/* Premium / Elite Row A Styling - Apple MacBook Air Midnight Blue */
 .seat.seat-elite {
-    background: linear-gradient(145deg, #00e5ff 0%, #0084ff 100%) !important;
-    color: #ffffff !important;
-    border: 1.5px solid #a5f3fc !important;
-    box-shadow: 0 0 12px rgba(0, 229, 255, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.5);
-    font-weight: 800;
-    text-shadow: 0 1px 2px rgba(0, 30, 60, 0.6);
+    background: linear-gradient(145deg, #1b2537 0%, #0d1522 100%) !important;
+    color: #f8fafc !important;
+    border: 1.5px solid #38bdf8 !important;
+    box-shadow: 0 2px 8px rgba(13, 21, 34, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 .seat.seat-elite:hover {
-    background: linear-gradient(145deg, #38e1ff 0%, #0099ff 100%) !important;
-    border-color: #ffffff !important;
+    background: linear-gradient(145deg, #27364d 0%, #162134 100%) !important;
+    border-color: #7dd3fc !important;
     transform: scale(1.12);
-    box-shadow: 0 0 16px rgba(0, 229, 255, 0.85);
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.55) !important;
 }
 
 .seat.seat-elite.selected {
@@ -961,7 +1088,7 @@ body {
 
 .seat.seat-elite.booked {
     background: var(--seat-booked) !important;
-    color: rgba(255, 255, 255, 0.4) !important;
+    color: rgba(255, 255, 255, 0.35) !important;
     border-color: rgba(211, 47, 47, 0.4) !important;
     box-shadow: none !important;
     text-shadow: none;
@@ -1039,9 +1166,9 @@ body {
 }
 
 .legend-box.seat-elite-legend {
-    background: linear-gradient(145deg, #00e5ff 0%, #0084ff 100%);
-    border: 1.5px solid #a5f3fc;
-    box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+    background: linear-gradient(145deg, #1b2537 0%, #0d1522 100%);
+    border: 1.5px solid #38bdf8;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.45);
 }
 
 /* Checkout Receipt Summary Panel */
@@ -1921,37 +2048,63 @@ body {
     }
 
     /* MOBILE SEATING INTERFACE & TOUCH TARGETS */
+    .seat-scroll-nav-bar {
+        display: flex;
+    }
+
     .seat-scroll-hint {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
+        display: none;
     }
 
     .seat-map-scroll-container {
         align-items: flex-start;
-        padding: 10px 4px 18px 4px;
+        padding: 12px 36px 20px 14px;
+        scroll-padding: 0 36px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .seat-layout-grid {
+        padding-right: 28px;
     }
 
     .seat {
-        width: 38px;
-        height: 38px;
-        font-size: 12px;
-        border-radius: 7px;
+        width: 32px;
+        height: 32px;
+        font-size: 11px;
+        border-radius: 6px;
     }
 
     .seat-aisle-spacer {
-        width: 38px;
-        height: 38px;
+        width: 20px;
+        height: 32px;
     }
 
     .seat-slot-empty {
-        width: 38px;
-        height: 38px;
+        width: 32px;
+        height: 32px;
     }
 
     .row-label {
-        width: 24px;
+        width: 22px;
         font-size: 11px;
+    }
+
+    .booking-header {
+        gap: 12px;
+        margin-bottom: 16px;
+        padding-bottom: 10px;
+    }
+
+    .booking-header .btn-sm,
+    .booking-back-btn {
+        height: 36px;
+        padding: 6px 14px;
+        font-size: 13px;
+        border-radius: 8px;
+    }
+
+    .booking-movie-title {
+        font-size: 18px;
     }
 
     /* MOBILE STICKY ACTION BAR */
@@ -2014,30 +2167,53 @@ body {
     }
 }
 
-/* Extra Small Screens (320px - 380px) */
-@media screen and (max-width: 380px) {
+/* Compact Mobile Phone Screens (320px - 480px) */
+@media screen and (max-width: 480px) {
     .main-content {
         padding: 68px 10px 80px 10px;
     }
 
     .movie-card-body {
-        padding: 16px;
+        padding: 14px;
     }
 
     .booking-movie-title {
-        font-size: 20px;
+        font-size: 16px;
     }
 
     .seat {
-        width: 36px;
-        height: 36px;
-        font-size: 11px;
+        width: 28px;
+        height: 28px;
+        font-size: 10px;
+        border-radius: 5px;
     }
 
-    .seat-aisle-spacer,
+    .seat-row {
+        gap: 4px;
+    }
+
+    .seat-layout-grid {
+        gap: 5px;
+        padding-right: 32px;
+    }
+
+    .seat-aisle-spacer {
+        width: 14px;
+        height: 28px;
+    }
+
     .seat-slot-empty {
-        width: 36px;
-        height: 36px;
+        width: 28px;
+        height: 28px;
+    }
+
+    .row-label {
+        width: 18px;
+        font-size: 10px;
+    }
+
+    .seat-map-scroll-container {
+        padding: 10px 36px 18px 10px;
     }
 }
 

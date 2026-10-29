@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>APEX CINEMAS - Premium Movie Booking</title>
+    <link rel="icon" type="image/png" href="apex-icon.png">
+    <link rel="shortcut icon" type="image/png" href="apex-icon.png">
+    <link rel="apple-touch-icon" href="apex-icon.png">
     <!-- Google Fonts for premium typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +16,7 @@
         rel="stylesheet">
     <!-- FontAwesome for cinematic iconography -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 
 <body class="dark-theme">
@@ -23,7 +26,10 @@
 
         <div class="auth-card glass-card">
             <div class="auth-header">
-                <h1 class="brand-logo"><span class="highlight">APEX</span> CINEMAS</h1>
+                <div class="brand-title-row">
+                    <img src="apex-icon.png" alt="APEX" class="brand-title-icon brand-title-icon-lg">
+                    <h1 class="brand-logo"><span class="highlight">APEX</span> CINEMAS</h1>
+                </div>
                 <p class="tagline">Authorized Access Portal</p>
             </div>
 
@@ -103,7 +109,8 @@
         <!-- MOBILE TOP NAVIGATION BAR -->
         <header class="mobile-top-nav">
             <div class="mobile-brand" onclick="showView('catalog')">
-                <span class="highlight">APEX</span> CINEMAS
+                <img src="apex-icon.png" alt="APEX" class="brand-title-icon brand-title-icon-sm">
+                <span><span class="highlight">APEX</span> CINEMAS</span>
             </div>
             <div class="mobile-nav-actions">
                 <button id="mobile-nav-admin" class="mobile-nav-admin-btn hidden-admin" onclick="showView('admin')" title="Admin Dashboard" aria-label="Admin Dashboard">
@@ -125,7 +132,10 @@
         <aside class="sidebar" id="app-sidebar">
             <div class="sidebar-header-row">
                 <div class="sidebar-brand">
-                    <h1 class="brand-logo"><span class="highlight">APEX</span><br>CINEMAS</h1>
+                    <div class="sidebar-brand-inner">
+                        <img src="apex-icon.png" alt="APEX" class="brand-title-icon brand-title-icon-lg">
+                        <h1 class="brand-logo"><span class="highlight">APEX</span><br>CINEMAS</h1>
+                    </div>
                 </div>
                 <button class="sidebar-close-btn" onclick="closeMobileNav()" aria-label="Close navigation">
                     <i class="fa-solid fa-xmark"></i>
@@ -204,10 +214,13 @@
             <!-- 2. INTERACTIVE SEAT BOOKING VIEW -->
             <section id="view-booking" class="app-view">
                 <div class="booking-header">
-                    <button class="btn btn-secondary btn-sm" onclick="showView('catalog')">
+                    <button class="btn btn-secondary btn-sm booking-back-btn" onclick="showView('catalog')">
                         <i class="fa-solid fa-arrow-left-long"></i> Back
                     </button>
-                    <h2 id="booking-movie-title" class="booking-movie-title">Select Seats</h2>
+                    <h2 id="booking-movie-title" class="booking-movie-title">
+                        <img src="apex-icon.png" alt="APEX" class="brand-title-icon brand-title-icon-sm">
+                        <span id="booking-movie-title-text">Select Seats</span>
+                    </h2>
                 </div>
 
                 <div class="booking-split-container">
@@ -219,6 +232,13 @@
                             <div id="showtimes-list" class="showtimes-list">
                                 <!-- Loaded dynamically via app.js -->
                             </div>
+                        </div>
+
+                        <!-- Mobile Seating Quick Scroll Navigator -->
+                        <div class="seat-scroll-nav-bar">
+                            <button type="button" class="seat-scroll-btn" onclick="scrollSeatsDirection(-220)" aria-label="Scroll left"><i class="fa-solid fa-chevron-left"></i> Left</button>
+                            <span class="seat-scroll-hint-badge"><i class="fa-solid fa-arrows-left-right"></i> Swipe or tap to view all seats</span>
+                            <button type="button" class="seat-scroll-btn" onclick="scrollSeatsDirection(220)" aria-label="Scroll right">Right <i class="fa-solid fa-chevron-right"></i></button>
                         </div>
 
                         <!-- Curved Cinema Screen -->
@@ -260,7 +280,7 @@
                             </div>
                             <div class="legend-item legend-item-elite">
                                 <span class="legend-box seat-elite-legend"></span>
-                                <span>Elite / Diamond Blue</span>
+                                <span>Elite (Midnight Blue)</span>
                             </div>
                         </div>
                     </div>
@@ -343,15 +363,25 @@
             <!-- 5. INTERACTIVE SEAT CANCELLATION VIEW -->
             <section id="view-cancel-booking" class="app-view">
                 <div class="booking-header">
-                    <button class="btn btn-secondary btn-sm" onclick="showView('bookings')">
+                    <button class="btn btn-secondary btn-sm booking-back-btn" onclick="showView('bookings')">
                         <i class="fa-solid fa-arrow-left-long"></i> Back
                     </button>
-                    <h2 class="booking-movie-title" id="cancel-booking-title">Cancel Tickets</h2>
+                    <h2 class="booking-movie-title" id="cancel-booking-title">
+                        <img src="apex-icon.png" alt="APEX" class="brand-title-icon brand-title-icon-sm">
+                        <span id="cancel-booking-title-text">Cancel Tickets</span>
+                    </h2>
                 </div>
 
                 <div class="booking-split-container">
                     <!-- Left: Seat selector for cancellation -->
                     <div class="seat-selector-panel glass-panel">
+                        <!-- Mobile Seating Quick Scroll Navigator -->
+                        <div class="seat-scroll-nav-bar">
+                            <button type="button" class="seat-scroll-btn" onclick="scrollCancelSeatsDirection(-220)" aria-label="Scroll left"><i class="fa-solid fa-chevron-left"></i> Left</button>
+                            <span class="seat-scroll-hint-badge"><i class="fa-solid fa-arrows-left-right"></i> Swipe or tap to view all seats</span>
+                            <button type="button" class="seat-scroll-btn" onclick="scrollCancelSeatsDirection(220)" aria-label="Scroll right">Right <i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+
                         <!-- Curved Cinema Screen -->
                         <div class="cinema-screen-container">
                             <div class="screen-curve-wrapper">
@@ -680,7 +710,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=8"></script>
+    <script src="app.js?v=11"></script>
 </body>
 
 </html>
