@@ -934,20 +934,21 @@ body {
     box-shadow: 0 0 12px rgba(0, 176, 255, 0.45) !important;
 }
 
-/* Premium / Elite Row A Styling - Distinct Golden Luxury Hue */
+/* Premium / Elite Row A Styling - Electric / Diamond Blue */
 .seat.seat-elite {
-    background: linear-gradient(145deg, #d97706, #b45309) !important;
+    background: linear-gradient(145deg, #00e5ff 0%, #0084ff 100%) !important;
     color: #ffffff !important;
-    border: 1.5px solid #fbbf24 !important;
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.45);
-    font-weight: 700;
+    border: 1.5px solid #a5f3fc !important;
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0, 30, 60, 0.6);
 }
 
 .seat.seat-elite:hover {
-    background: linear-gradient(145deg, #f59e0b, #d97706) !important;
-    border-color: #fde68a !important;
+    background: linear-gradient(145deg, #38e1ff 0%, #0099ff 100%) !important;
+    border-color: #ffffff !important;
     transform: scale(1.12);
-    box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.85);
 }
 
 .seat.seat-elite.selected {
@@ -955,6 +956,7 @@ body {
     color: #ffffff !important;
     border-color: #69f0ae !important;
     box-shadow: 0 0 14px rgba(76, 175, 80, 0.7) !important;
+    text-shadow: none;
 }
 
 .seat.seat-elite.booked {
@@ -962,13 +964,14 @@ body {
     color: rgba(255, 255, 255, 0.4) !important;
     border-color: rgba(211, 47, 47, 0.4) !important;
     box-shadow: none !important;
+    text-shadow: none;
 }
 
 .seat.seat-elite.your-booking {
-    background: var(--seat-your-booking) !important;
+    background: #2563eb !important;
     color: #ffffff !important;
-    border-color: #00b0ff !important;
-    box-shadow: 0 0 12px rgba(0, 176, 255, 0.6) !important;
+    border-color: #93c5fd !important;
+    box-shadow: 0 0 12px rgba(37, 99, 235, 0.7) !important;
 }
 
 /* Precise Aisle Spacers & Empty Slots matching seat size */
@@ -1036,9 +1039,9 @@ body {
 }
 
 .legend-box.seat-elite-legend {
-    background: linear-gradient(145deg, #d97706, #b45309);
-    border: 1.5px solid #fbbf24;
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    background: linear-gradient(145deg, #00e5ff 0%, #0084ff 100%);
+    border: 1.5px solid #a5f3fc;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
 }
 
 /* Checkout Receipt Summary Panel */
