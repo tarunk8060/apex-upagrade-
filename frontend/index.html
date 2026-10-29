@@ -13,7 +13,7 @@
         rel="stylesheet">
     <!-- FontAwesome for cinematic iconography -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=6">
 </head>
 
 <body class="dark-theme">
@@ -100,10 +100,33 @@
 
     <!-- ----------------- MAIN CORE APPLICATION ----------------- -->
     <div id="app-layout" class="app-layout hidden">
-        <!-- SIDEBAR NAVIGATION -->
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <h1 class="brand-logo"><span class="highlight">APEX</span><br>CINEMAS</h1>
+        <!-- MOBILE TOP NAVIGATION BAR -->
+        <header class="mobile-top-nav">
+            <div class="mobile-brand" onclick="showView('catalog')">
+                <span class="highlight">APEX</span> CINEMAS
+            </div>
+            <div class="mobile-nav-actions">
+                <button class="mobile-theme-btn" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle Theme">
+                    <i class="fa-solid fa-circle-half-stroke" id="mobile-theme-icon"></i>
+                </button>
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle" onclick="toggleMobileNav()" aria-label="Toggle Navigation">
+                    <i class="fa-solid fa-bars" id="mobile-menu-icon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- MOBILE SIDEBAR BACKDROP OVERLAY -->
+        <div id="sidebar-backdrop" class="sidebar-backdrop hidden" onclick="closeMobileNav()"></div>
+
+        <!-- SIDEBAR NAVIGATION (DESKTOP & MOBILE DRAWER) -->
+        <aside class="sidebar" id="app-sidebar">
+            <div class="sidebar-header-row">
+                <div class="sidebar-brand">
+                    <h1 class="brand-logo"><span class="highlight">APEX</span><br>CINEMAS</h1>
+                </div>
+                <button class="sidebar-close-btn" onclick="closeMobileNav()" aria-label="Close navigation">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
 
             <nav class="sidebar-nav">
@@ -150,19 +173,32 @@
                 <div class="carousel-container" id="main-carousel">
                     <div class="carousel-slide fade">
                         <img src="https://res.cloudinary.com/mrfnjg37/image/upload/f_auto,q_auto/image_4158a38a_waurdj"
-                            alt="Slide 1">
+                            alt="Featured Slide 1">
                     </div>
                     <div class="carousel-slide fade">
                         <img src="https://res.cloudinary.com/wn7rgdcj/image/upload/f_auto,q_auto/image_708cc54d_jwyiri"
-                            alt="Slide 2">
+                            alt="Featured Slide 2">
                     </div>
                     <div class="carousel-slide fade">
                         <img src="https://res.cloudinary.com/mrfnjg37/image/upload/f_auto,q_auto/image_a5564222_nfpzrr"
-                            alt="Slide 3">
+                            alt="Featured Slide 3">
                     </div>
                     <div class="carousel-slide fade">
                         <img src="https://res.cloudinary.com/mrfnjg37/image/upload/f_auto,q_auto/image_7cffa155_kzzyae"
-                            alt="Slide 4">
+                            alt="Featured Slide 4">
+                    </div>
+                    <!-- Carousel Controls -->
+                    <button class="carousel-arrow prev" onclick="changeSlide(-1)" aria-label="Previous Slide">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button class="carousel-arrow next" onclick="changeSlide(1)" aria-label="Next Slide">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                    <div class="carousel-dots-container">
+                        <span class="carousel-dot active" onclick="currentSlide(1)"></span>
+                        <span class="carousel-dot" onclick="currentSlide(2)"></span>
+                        <span class="carousel-dot" onclick="currentSlide(3)"></span>
+                        <span class="carousel-dot" onclick="currentSlide(4)"></span>
                     </div>
                 </div>
 
@@ -195,14 +231,23 @@
                             </div>
                         </div>
 
-                        <div class="screen-indicator">
-                            <span class="screen-glow"></span>
-                            <p class="screen-label">STAGE / SCREEN THIS WAY</p>
+                        <!-- Curved Cinema Screen -->
+                        <div class="cinema-screen-container">
+                            <div class="screen-curve-wrapper">
+                                <div class="screen-glow-beam"></div>
+                                <div class="screen-curved-bar"></div>
+                            </div>
+                            <p class="screen-label"><i class="fa-solid fa-film"></i> SCREEN THIS WAY</p>
                         </div>
 
-                        <!-- Seat layout grid -->
-                        <div id="seat-layout-grid" class="seat-layout-grid">
-                            <!-- Loaded dynamically via app.js -->
+                        <!-- Dedicated horizontal scroll container for seat map -->
+                        <div class="seat-map-scroll-container" id="seat-scroll-container">
+                            <div class="seat-scroll-hint mobile-only">
+                                <i class="fa-solid fa-arrows-left-right"></i> Scroll sideways to view all seats
+                            </div>
+                            <div id="seat-layout-grid" class="seat-layout-grid">
+                                <!-- Loaded dynamically via app.js -->
+                            </div>
                         </div>
 
                         <!-- Grid Legend -->
@@ -222,6 +267,10 @@
                             <div class="legend-item">
                                 <span class="legend-box seat-your-booking"></span>
                                 <span>Your Seat</span>
+                            </div>
+                            <div class="legend-item legend-item-elite">
+                                <span class="legend-box seat-elite-legend"></span>
+                                <span>Elite / Premium</span>
                             </div>
                         </div>
                     </div>
@@ -313,14 +362,23 @@
                 <div class="booking-split-container">
                     <!-- Left: Seat selector for cancellation -->
                     <div class="seat-selector-panel glass-panel">
-                        <div class="screen-indicator">
-                            <span class="screen-glow"></span>
-                            <p class="screen-label">STAGE / SCREEN THIS WAY</p>
+                        <!-- Curved Cinema Screen -->
+                        <div class="cinema-screen-container">
+                            <div class="screen-curve-wrapper">
+                                <div class="screen-glow-beam"></div>
+                                <div class="screen-curved-bar"></div>
+                            </div>
+                            <p class="screen-label"><i class="fa-solid fa-film"></i> SCREEN THIS WAY</p>
                         </div>
 
-                        <!-- Seat layout grid for cancellation -->
-                        <div id="cancel-seat-layout-grid" class="seat-layout-grid">
-                            <!-- Loaded dynamically via app.js -->
+                        <!-- Dedicated horizontal scroll container for seat map -->
+                        <div class="seat-map-scroll-container" id="cancel-seat-scroll-container">
+                            <div class="seat-scroll-hint mobile-only">
+                                <i class="fa-solid fa-arrows-left-right"></i> Scroll sideways to view all seats
+                            </div>
+                            <div id="cancel-seat-layout-grid" class="seat-layout-grid">
+                                <!-- Loaded dynamically via app.js -->
+                            </div>
                         </div>
 
                         <!-- Grid Legend -->
@@ -454,6 +512,28 @@
         </main>
     </div>
 
+    <!-- Mobile Sticky Booking Bar -->
+    <div id="mobile-sticky-booking-bar" class="mobile-sticky-action-bar hidden">
+        <div class="sticky-bar-info">
+            <span id="mobile-bar-seats" class="sticky-bar-seats">0 Seats</span>
+            <span id="mobile-bar-total" class="sticky-bar-total">₹0</span>
+        </div>
+        <button id="mobile-bar-confirm-btn" class="btn btn-success btn-sm sticky-bar-btn" onclick="handleConfirmBooking()">
+            Book Now <i class="fa-solid fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <!-- Mobile Sticky Cancellation Bar -->
+    <div id="mobile-sticky-cancel-bar" class="mobile-sticky-action-bar hidden">
+        <div class="sticky-bar-info">
+            <span id="mobile-cancel-bar-seats" class="sticky-bar-seats">0 to cancel</span>
+            <span id="mobile-cancel-bar-refund" class="sticky-bar-total">₹0 Refund</span>
+        </div>
+        <button id="mobile-bar-cancel-btn" class="btn btn-danger btn-sm sticky-bar-btn" onclick="handleConfirmCancellation()">
+            Cancel Seats <i class="fa-solid fa-arrow-right"></i>
+        </button>
+    </div>
+
     <!-- Alert / Toast notification element -->
     <div id="toast-notification" class="toast-notification"></div>
 
@@ -484,54 +564,62 @@
 
     <!-- Age Warning Modal -->
     <div id="age-warning-modal-overlay" class="modal-overlay hidden" onclick="handleAgeWarningOverlayClick(event)">
-        <div class="age-warning-card">
+        <div class="age-warning-card glass-panel">
+            <div class="panel-accent-bar accent-red"></div>
             <div class="age-badge-circle">A</div>
-            <h3 class="age-warning-title">This movie has been certified A</h3>
-            <p class="age-warning-desc">The content may include mature themes, violence, strong language, or adult scenes.</p>
+            <h3 class="age-warning-title">Movie Certified A (Adults Only)</h3>
+            <p class="age-warning-desc">This film contains mature themes, violence, strong language, or adult scenes.</p>
             
             <hr class="age-warning-divider">
             
             <div class="age-warning-conditions">
                 <div class="condition-row">
                     <span class="condition-icon-badge">18+ <span class="sub">ONLY</span></span>
-                    <span class="condition-text">For viewers aged 18 and above only</span>
+                    <span class="condition-text">Strictly for viewers aged 18 and above</span>
                 </div>
                 <div class="condition-row">
                     <span class="condition-icon-wrapper"><i class="fa-solid fa-id-card"></i></span>
-                    <span class="condition-text">Age proof will be checked at the theatre</span>
+                    <span class="condition-text">Valid photo ID proof will be checked at entry</span>
                 </div>
                 <div class="condition-row">
                     <span class="condition-icon-wrapper"><i class="fa-solid fa-ban"></i></span>
-                    <span class="condition-text">No refunds will be issued for entry denied due to age restrictions</span>
+                    <span class="condition-text">No refunds for entry denied due to age restrictions</span>
                 </div>
             </div>
             
-            <button class="btn age-warning-btn" onclick="confirmAgeWarning()">Confirm and proceed</button>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn btn-secondary modal-btn" onclick="closeAgeWarningModal()">
+                    <i class="fa-solid fa-xmark"></i> Go Back
+                </button>
+                <button class="btn btn-primary modal-btn" onclick="confirmAgeWarning()">
+                    <i class="fa-solid fa-check"></i> Proceed
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- DISCLAIMER MODAL OVERLAY -->
-    <div id="disclaimer-modal-overlay" class="age-warning-modal-overlay" onclick="handleDisclaimerOverlayClick(event)" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(15px);">
-        <div class="age-warning-card glass-panel" style="width: 450px; text-align: center; border-radius: 16px; padding: 30px; border: 1px solid var(--border-color); background: var(--bg-card); display: flex; flex-direction: column; gap: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); position: relative; animation: modalSlideUp 0.3s ease;">
-            <div class="panel-accent-bar accent-red" style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--cinema-red); border-top-left-radius: 16px; border-top-right-radius: 16px;"></div>
-            <div class="modal-icon-badge" style="width: 60px; height: 60px; border-radius: 50%; background: rgba(229, 9, 20, 0.15); color: var(--cinema-red); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto;">
+    <div id="disclaimer-modal-overlay" class="modal-overlay hidden" onclick="handleDisclaimerOverlayClick(event)">
+        <div class="modal-card glass-panel disclaimer-modal-card">
+            <div class="panel-accent-bar accent-red"></div>
+            <div class="modal-icon-badge type-danger">
                 <i class="fa-solid fa-circle-exclamation"></i>
             </div>
-            <h3 class="modal-title" style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0;">Booking Limit Disclaimer</h3>
-            <p class="modal-subtitle" style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin: 0;">You can select and book a maximum of 10 tickets at a single time.</p>
-            <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; font-size: 13px; color: var(--text-primary); text-align: left; line-height: 1.6;">
-                <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--cinema-red);"><i class="fa-solid fa-circle-info"></i> How to book more:</p>
-                <ol style="margin: 0; padding-left: 20px;">
+            <h3 class="modal-title">Booking Limit Disclaimer</h3>
+            <p class="modal-subtitle">You can select and book a maximum of 10 tickets at a single time.</p>
+            <div class="disclaimer-info-box">
+                <p class="disclaimer-info-title"><i class="fa-solid fa-circle-info"></i> How to book more:</p>
+                <ol class="disclaimer-ol">
                     <li>Complete the checkout process for the currently selected 10 seats.</li>
                     <li>Pay for the reservation.</li>
                     <li>Return to the seat layout to reserve additional seats.</li>
                 </ol>
             </div>
-            <button class="btn btn-primary btn-block btn-lg" onclick="closeDisclaimerModal()" style="padding: 12px 0; font-size: 14px; font-weight: 600; border-radius: 10px;">Got It, Continue</button>
+            <button class="btn btn-primary btn-block btn-lg" onclick="closeDisclaimerModal()">Got It, Continue</button>
         </div>
     </div>
 
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
 </body>
 
 </html>

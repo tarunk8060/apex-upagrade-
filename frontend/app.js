@@ -165,6 +165,46 @@ function changeTheme(themeName) {
     } else {
         document.body.className = 'dark-theme';
     }
+    const themeSelect = document.getElementById('theme-selector');
+    if (themeSelect) themeSelect.value = themeName;
+    localStorage.setItem('preferredTheme', themeName);
+}
+
+function toggleTheme() {
+    const isLight = document.body.classList.contains('light-theme');
+    changeTheme(isLight ? 'dark' : 'light');
+}
+
+// Mobile Navigation Drawer Controls
+function toggleMobileNav() {
+    const sidebar = document.getElementById('app-sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const icon = document.getElementById('mobile-menu-icon');
+    if (!sidebar) return;
+
+    const isOpen = sidebar.classList.contains('mobile-open');
+    if (isOpen) {
+        closeMobileNav();
+    } else {
+        sidebar.classList.add('mobile-open');
+        if (backdrop) backdrop.classList.remove('hidden');
+        if (icon) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-xmark');
+        }
+    }
+}
+
+function closeMobileNav() {
+    const sidebar = document.getElementById('app-sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const icon = document.getElementById('mobile-menu-icon');
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (backdrop) backdrop.classList.add('hidden');
+    if (icon) {
+        icon.classList.remove('fa-xmark');
+        icon.classList.add('fa-bars');
+    }
 }
 
 // -------------------------------------------------------------
@@ -359,14 +399,28 @@ function showView(viewName) {
         return;
     }
 
+    // Close mobile drawer on navigation
+    closeMobileNav();
+
     state.activeView = viewName;
     localStorage.setItem('activeView', viewName);
+
+    // Hide mobile sticky action bars unless on active booking/cancellation view with selections
+    if (viewName !== 'booking') {
+        const mobileBar = document.getElementById('mobile-sticky-booking-bar');
+        if (mobileBar) mobileBar.classList.add('hidden');
+    }
+    if (viewName !== 'cancel-booking') {
+        const mobileCancelBar = document.getElementById('mobile-sticky-cancel-bar');
+        if (mobileCancelBar) mobileCancelBar.classList.add('hidden');
+    }
 
     // Toggle active classes in HTML
     document.querySelectorAll('.app-view').forEach(view => {
         view.classList.remove('active');
     });
-    document.getElementById(`view-${viewName}`).classList.add('active');
+    const targetView = document.getElementById(`view-${viewName}`);
+    if (targetView) targetView.classList.add('active');
 
     // Highlight sidebar active item
     document.querySelectorAll('.nav-item').forEach(btn => {
@@ -374,13 +428,16 @@ function showView(viewName) {
     });
 
     if (viewName === 'catalog') {
-        document.getElementById('nav-btn-movies').classList.add('active');
+        const btn = document.getElementById('nav-btn-movies');
+        if (btn) btn.classList.add('active');
         loadCatalog();
     } else if (viewName === 'bookings') {
-        document.getElementById('nav-btn-bookings').classList.add('active');
+        const btn = document.getElementById('nav-btn-bookings');
+        if (btn) btn.classList.add('active');
         loadBookings();
     } else if (viewName === 'admin') {
-        document.getElementById('nav-btn-admin').classList.add('active');
+        const btn = document.getElementById('nav-btn-admin');
+        if (btn) btn.classList.add('active');
         loadAdminPanel();
     }
 }
@@ -589,12 +646,12 @@ function handleAgeWarningOverlayClick(event) {
 
 function showDisclaimerModal() {
     const modal = document.getElementById('disclaimer-modal-overlay');
-    modal.style.display = 'flex';
+    if (modal) modal.classList.remove('hidden');
 }
 
 function closeDisclaimerModal() {
     const modal = document.getElementById('disclaimer-modal-overlay');
-    modal.style.display = 'none';
+    if (modal) modal.classList.add('hidden');
 }
 
 function handleDisclaimerOverlayClick(event) {
@@ -685,155 +742,176 @@ async function selectShowtime(showtimeId) {
     }
 }
 
+// Helper: generate row letters (A..Z, AA..AZ, etc.) matching backend
+function getRowLetter(rowIndex) {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (rowIndex < alphabet.length) {
+        return alphabet[rowIndex];
+    }
+    const first = alphabet[Math.floor(rowIndex / alphabet.length) - 1];
+    const second = alphabet[rowIndex % alphabet.length];
+    return `${first}${second}`;
+}
+
+// Helper: build an interactive seat button
+function createSeatButton(seatNo, seatNum, bookedById, isElite = false) {
+    const seatBtn = document.createElement('button');
+    seatBtn.className = 'seat';
+    seatBtn.textContent = seatNum;
+    seatBtn.dataset.seatNo = seatNo;
+
+    if (isElite) {
+        seatBtn.classList.add('seat-elite');
+    }
+
+    const isBooked = bookedById !== null && bookedById !== undefined;
+    const isBookedByMe = isBooked && state.currentUser && (bookedById === state.currentUser.id);
+
+    if (isBooked) {
+        if (isBookedByMe) {
+            seatBtn.classList.add('your-booking');
+            seatBtn.title = `Seat ${seatNo} (Your Reservation)`;
+            seatBtn.setAttribute('aria-label', `Seat ${seatNo}, booked by you`);
+        } else {
+            seatBtn.classList.add('booked');
+            seatBtn.title = `Seat ${seatNo} (Booked)`;
+            seatBtn.setAttribute('aria-label', `Seat ${seatNo}, occupied`);
+            seatBtn.disabled = true;
+        }
+    } else {
+        if (state.selectedSeats.includes(seatNo)) {
+            seatBtn.classList.add('selected');
+        }
+        seatBtn.title = isElite ? `Seat ${seatNo} (Elite / Premium Front Row)` : `Seat ${seatNo} (Available)`;
+        seatBtn.setAttribute('aria-label', `Seat ${seatNo}, available`);
+        seatBtn.onclick = () => selectSeat(seatNo, seatBtn);
+    }
+
+    return seatBtn;
+}
+
 function renderSeatGrid(totalSeats, seatStatesMap) {
     const gridContainer = document.getElementById('seat-layout-grid');
     gridContainer.innerHTML = '';
 
-    const displaySeats = totalSeats;
-    const rowLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    // MANDATORY IMAX RULE: total_seats > 120 is IMAX; total_seats <= 120 is non-IMAX.
+    const isImax = totalSeats > 120;
 
-    if (totalSeats > 120) {
-        // Special 24-column layout: 5 - 2 aisle - 10 - 2 aisle - 5
-        // Row A: 24 continuous seats
-        // Rows B, C...: 20 seats with aisles in columns 6, 7 and 18, 19
-        let rowsCount = 1;
-        if (displaySeats > 24) {
-            rowsCount += Math.ceil((displaySeats - 24) / 20);
-        }
+    if (isImax) {
+        // IMAX LAYOUT (> 120 seats):
+        // Row A (Elite): up to 24 seats spanning all 24 column slots
+        // Rows B+: 20 seats with aisles at columns 6, 7 and 18, 19
+        // (5 seats - 2 aisle spaces - 10 seats - 2 aisle spaces - 5 seats = 24 slots)
+        const rowASeats = Math.min(24, totalSeats);
+        const remaining = totalSeats - rowASeats;
+        const remainingRows = remaining > 0 ? Math.ceil(remaining / 20) : 0;
+        const totalRows = 1 + remainingRows;
 
-        for (let r = 0; r < rowsCount; r++) {
-            const letter = rowLetters[r];
+        for (let r = 0; r < totalRows; r++) {
+            const letter = getRowLetter(r);
             const rowDiv = document.createElement('div');
-            rowDiv.className = 'seat-row';
+            rowDiv.className = 'seat-row imax-seat-row';
 
-            // Row letter on left
-            const label = document.createElement('span');
-            label.className = 'row-label';
-            label.textContent = letter;
-            rowDiv.appendChild(label);
+            // Left row label
+            const leftLabel = document.createElement('span');
+            leftLabel.className = 'row-label row-label-left';
+            leftLabel.textContent = letter;
+            rowDiv.appendChild(leftLabel);
 
             if (r === 0) {
-                // Row A: 24 continuous seats
-                const seatsInRowA = Math.min(24, displaySeats);
-                for (let seatNum = 1; seatNum <= seatsInRowA; seatNum++) {
-                    const seatNo = `A${seatNum}`;
-                    const seatBtn = document.createElement('button');
-                    seatBtn.className = 'seat';
-                    seatBtn.textContent = seatNum;
-
-                    const bookedById = seatStatesMap[seatNo];
-                    const isBooked = bookedById !== null && bookedById !== undefined;
-                    const isBookedByMe = isBooked && (bookedById === state.currentUser.id);
-
-                    if (isBooked) {
-                        if (isBookedByMe) {
-                            seatBtn.classList.add('your-booking');
-                            seatBtn.title = 'Your seat';
-                        } else {
-                            seatBtn.classList.add('booked');
-                            seatBtn.title = 'Reserved';
-                        }
+                // ROW A (Elite): 24 seats
+                for (let col = 1; col <= 24; col++) {
+                    if (col <= rowASeats) {
+                        const seatNo = `A${col}`;
+                        const seatBtn = createSeatButton(seatNo, col, seatStatesMap[seatNo], true);
+                        rowDiv.appendChild(seatBtn);
                     } else {
-                        seatBtn.title = `Seat ${seatNo}`;
-                        seatBtn.onclick = () => selectSeat(seatNo, seatBtn);
+                        const emptySpacer = document.createElement('div');
+                        emptySpacer.className = 'seat-slot-empty';
+                        rowDiv.appendChild(emptySpacer);
                     }
-                    rowDiv.appendChild(seatBtn);
                 }
             } else {
-                // Rows B, C...: 20 seats with aisles in columns 6, 7 and 18, 19
-                let seatNum = 1;
-                const rowLimit = (r === rowsCount - 1) ? (displaySeats - 24 - (r - 1) * 20) : 20;
+                // ROWS B, C, D...: 20 seats with 2 aisles
+                const rowSeatsRemaining = (r === totalRows - 1)
+                    ? (remaining - (r - 1) * 20)
+                    : 20;
 
+                let seatCounter = 0;
                 for (let col = 1; col <= 24; col++) {
                     if (col === 6 || col === 7 || col === 18 || col === 19) {
-                        const spacer = document.createElement('div');
-                        spacer.className = 'seat-aisle-spacer';
-                        rowDiv.appendChild(spacer);
+                        const aisleSpacer = document.createElement('div');
+                        aisleSpacer.className = 'seat-aisle-spacer';
+                        rowDiv.appendChild(aisleSpacer);
                     } else {
-                        if (seatNum <= rowLimit) {
-                            const seatNo = `${letter}${seatNum}`;
-                            const seatBtn = document.createElement('button');
-                            seatBtn.className = 'seat';
-                            seatBtn.textContent = seatNum;
-
-                            const bookedById = seatStatesMap[seatNo];
-                            const isBooked = bookedById !== null && bookedById !== undefined;
-                            const isBookedByMe = isBooked && (bookedById === state.currentUser.id);
-
-                            if (isBooked) {
-                                if (isBookedByMe) {
-                                    seatBtn.classList.add('your-booking');
-                                    seatBtn.title = 'Your seat';
-                                } else {
-                                    seatBtn.classList.add('booked');
-                                    seatBtn.title = 'Reserved';
-                                }
-                            } else {
-                                seatBtn.title = `Seat ${seatNo}`;
-                                seatBtn.onclick = () => selectSeat(seatNo, seatBtn);
-                            }
+                        seatCounter++;
+                        if (seatCounter <= rowSeatsRemaining) {
+                            const seatNo = `${letter}${seatCounter}`;
+                            const seatBtn = createSeatButton(seatNo, seatCounter, seatStatesMap[seatNo], false);
                             rowDiv.appendChild(seatBtn);
-                            seatNum++;
                         } else {
                             const emptySpacer = document.createElement('div');
-                            emptySpacer.style.width = '32px';
-                            emptySpacer.style.height = '32px';
+                            emptySpacer.className = 'seat-slot-empty';
                             rowDiv.appendChild(emptySpacer);
                         }
                     }
                 }
             }
+
+            // Right row label
+            const rightLabel = document.createElement('span');
+            rightLabel.className = 'row-label row-label-right';
+            rightLabel.textContent = letter;
+            rowDiv.appendChild(rightLabel);
+
             gridContainer.appendChild(rowDiv);
         }
     } else {
-        // Standard 10-column layout with middle aisle (c === 5)
+        // NON-IMAX LAYOUT (<= 120 seats):
+        // Standard 10 columns with middle aisle between col 5 and col 6
         const cols = 10;
-        const rowsCount = Math.ceil(displaySeats / cols);
+        const totalRows = Math.ceil(totalSeats / cols);
 
-        for (let r = 0; r < rowsCount; r++) {
-            const letter = rowLetters[r];
+        for (let r = 0; r < totalRows; r++) {
+            const letter = getRowLetter(r);
             const rowDiv = document.createElement('div');
-            rowDiv.className = 'seat-row';
+            rowDiv.className = 'seat-row standard-seat-row';
 
-            // Row letter on left
-            const label = document.createElement('span');
-            label.className = 'row-label';
-            label.textContent = letter;
-            rowDiv.appendChild(label);
+            // Left row label
+            const leftLabel = document.createElement('span');
+            leftLabel.className = 'row-label row-label-left';
+            leftLabel.textContent = letter;
+            rowDiv.appendChild(leftLabel);
+
+            const seatsInThisRow = (r === totalRows - 1)
+                ? (totalSeats - r * cols)
+                : cols;
 
             for (let c = 0; c < cols; c++) {
-                const seatNum = c + 1;
-                const seatNo = `${letter}${seatNum}`;
-
                 if (c === 5) {
-                    const spacer = document.createElement('div');
-                    spacer.className = 'seat-aisle-spacer';
-                    rowDiv.appendChild(spacer);
+                    const aisleSpacer = document.createElement('div');
+                    aisleSpacer.className = 'seat-aisle-spacer';
+                    rowDiv.appendChild(aisleSpacer);
                 }
 
-                const seatBtn = document.createElement('button');
-                seatBtn.className = 'seat';
-                seatBtn.textContent = seatNum;
-
-                const bookedById = seatStatesMap[seatNo];
-                const isBooked = bookedById !== null && bookedById !== undefined;
-                const isBookedByMe = isBooked && (bookedById === state.currentUser.id);
-
-                if (isBooked) {
-                    if (isBookedByMe) {
-                        seatBtn.classList.add('your-booking');
-                        seatBtn.title = 'Your seat';
-                    } else {
-                        seatBtn.classList.add('booked');
-                        seatBtn.title = 'Reserved';
-                    }
+                const seatNum = c + 1;
+                if (seatNum <= seatsInThisRow) {
+                    const seatNo = `${letter}${seatNum}`;
+                    const seatBtn = createSeatButton(seatNo, seatNum, seatStatesMap[seatNo], false);
+                    rowDiv.appendChild(seatBtn);
                 } else {
-                    seatBtn.title = `Seat ${seatNo}`;
-                    seatBtn.onclick = () => selectSeat(seatNo, seatBtn);
+                    const emptySpacer = document.createElement('div');
+                    emptySpacer.className = 'seat-slot-empty';
+                    rowDiv.appendChild(emptySpacer);
                 }
-
-                rowDiv.appendChild(seatBtn);
             }
+
+            // Right row label
+            const rightLabel = document.createElement('span');
+            rightLabel.className = 'row-label row-label-right';
+            rightLabel.textContent = letter;
+            rowDiv.appendChild(rightLabel);
+
             gridContainer.appendChild(rowDiv);
         }
     }
@@ -855,8 +933,10 @@ function selectSeat(seatNo, element) {
 
     // Sort seats alphabetically
     state.selectedSeats.sort((a, b) => {
-        const aRow = a[0], bRow = b[0];
-        const aNum = parseInt(a.slice(1)), bNum = parseInt(b.slice(1));
+        const aRow = a.replace(/[0-9]/g, '');
+        const bRow = b.replace(/[0-9]/g, '');
+        const aNum = parseInt(a.replace(/^[A-Z]+/, ''), 10);
+        const bNum = parseInt(b.replace(/^[A-Z]+/, ''), 10);
         if (aRow !== bRow) return aRow.localeCompare(bRow);
         return aNum - bNum;
     });
@@ -869,12 +949,33 @@ function updateReceiptDisplay() {
     document.getElementById('summary-selected-seats').textContent = `Selected Seats: ${seatsText}`;
     document.getElementById('summary-ticket-count').textContent = `Total Tickets: ${state.selectedSeats.length}`;
 
-    const totalPrice = state.selectedSeats.length * (state.selectedMovie ? state.selectedMovie.price : 0);
+    const pricePerTicket = state.selectedMovie ? state.selectedMovie.price : 0;
+    const totalPrice = state.selectedSeats.length * pricePerTicket;
     document.getElementById('summary-total-price').textContent = `₹${totalPrice}`;
 
     // Enable/disable confirm button
     const confirmBtn = document.getElementById('confirm-booking-btn');
-    confirmBtn.disabled = (state.selectedSeats.length === 0 || !state.selectedShowtimeId);
+    if (confirmBtn) {
+        confirmBtn.disabled = (state.selectedSeats.length === 0 || !state.selectedShowtimeId);
+    }
+
+    // Update Mobile Sticky Booking Bar
+    const mobileBar = document.getElementById('mobile-sticky-booking-bar');
+    const mobileBarSeats = document.getElementById('mobile-bar-seats');
+    const mobileBarTotal = document.getElementById('mobile-bar-total');
+    const mobileBarBtn = document.getElementById('mobile-bar-confirm-btn');
+
+    if (mobileBar && mobileBarSeats && mobileBarTotal) {
+        if (state.selectedSeats.length > 0 && state.selectedShowtimeId) {
+            mobileBarSeats.textContent = `${state.selectedSeats.length} Seat${state.selectedSeats.length > 1 ? 's' : ''} (${seatsText})`;
+            mobileBarTotal.textContent = `₹${totalPrice}`;
+            mobileBar.classList.remove('hidden');
+            if (mobileBarBtn) mobileBarBtn.disabled = false;
+        } else {
+            mobileBar.classList.add('hidden');
+            if (mobileBarBtn) mobileBarBtn.disabled = true;
+        }
+    }
 }
 
 function handleConfirmBooking() {
@@ -1228,149 +1329,162 @@ function renderCancelSeatGrid(totalSeats, seatStatesMap) {
     const gridContainer = document.getElementById('cancel-seat-layout-grid');
     gridContainer.innerHTML = '';
 
-    const displaySeats = Math.min(totalSeats, 150);
-    const rowLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    // MANDATORY IMAX RULE: total_seats > 120 is IMAX; total_seats <= 120 is non-IMAX.
+    const isImax = totalSeats > 120;
 
-    if (totalSeats > 120) {
-        // Special 24-column layout: 5 - 2 aisle - 10 - 2 aisle - 5
-        let rowsCount = 1;
-        if (displaySeats > 24) {
-            rowsCount += Math.ceil((displaySeats - 24) / 20);
-        }
+    if (isImax) {
+        // IMAX cancellation layout (> 120 seats):
+        // Row A: up to 24 seats; Rows B+: 20 seats with 2 aisles
+        const rowASeats = Math.min(24, totalSeats);
+        const remaining = totalSeats - rowASeats;
+        const remainingRows = remaining > 0 ? Math.ceil(remaining / 20) : 0;
+        const totalRows = 1 + remainingRows;
 
-        for (let r = 0; r < rowsCount; r++) {
-            const letter = rowLetters[r];
+        for (let r = 0; r < totalRows; r++) {
+            const letter = getRowLetter(r);
             const rowDiv = document.createElement('div');
-            rowDiv.className = 'seat-row';
+            rowDiv.className = 'seat-row imax-seat-row';
 
-            // Row letter on left
-            const label = document.createElement('span');
-            label.className = 'row-label';
-            label.textContent = letter;
-            rowDiv.appendChild(label);
+            // Left row label
+            const leftLabel = document.createElement('span');
+            leftLabel.className = 'row-label row-label-left';
+            leftLabel.textContent = letter;
+            rowDiv.appendChild(leftLabel);
 
             if (r === 0) {
-                // Row A: 24 continuous seats
-                const seatsInRowA = Math.min(24, displaySeats);
-                for (let seatNum = 1; seatNum <= seatsInRowA; seatNum++) {
-                    const seatNo = `A${seatNum}`;
-                    const seatBtn = document.createElement('button');
-                    seatBtn.className = 'seat';
-                    seatBtn.textContent = seatNum;
-
-                    const stateVal = seatStatesMap[seatNo];
-                    if (stateVal === 'user_booked') {
-                        seatBtn.classList.add('your-booking');
-                        seatBtn.title = `Your Seat ${seatNo} - Click to cancel`;
-                        seatBtn.onclick = () => selectSeatForCancellation(seatNo, seatBtn);
-                    } else if (stateVal === 'others_booked') {
-                        seatBtn.classList.add('booked');
-                        seatBtn.style.opacity = '0.35';
-                        seatBtn.style.pointerEvents = 'none';
-                        seatBtn.title = 'Reserved';
+                // Row A (Elite): up to 24 seats
+                for (let col = 1; col <= 24; col++) {
+                    if (col <= rowASeats) {
+                        const seatNo = `A${col}`;
+                        const seatBtn = createCancelSeatButton(seatNo, col, seatStatesMap[seatNo], true);
+                        rowDiv.appendChild(seatBtn);
                     } else {
-                        seatBtn.style.opacity = '0.2';
-                        seatBtn.style.pointerEvents = 'none';
-                        seatBtn.title = 'Available';
+                        const emptySpacer = document.createElement('div');
+                        emptySpacer.className = 'seat-slot-empty';
+                        rowDiv.appendChild(emptySpacer);
                     }
-                    rowDiv.appendChild(seatBtn);
                 }
             } else {
-                // Rows B, C...: 20 seats with aisles in columns 6, 7 and 18, 19
-                let seatNum = 1;
-                const rowLimit = (r === rowsCount - 1) ? (displaySeats - 24 - (r - 1) * 20) : 20;
+                // Rows B, C, D...: 20 seats with 2 aisles
+                const rowSeatsRemaining = (r === totalRows - 1)
+                    ? (remaining - (r - 1) * 20)
+                    : 20;
 
+                let seatCounter = 0;
                 for (let col = 1; col <= 24; col++) {
                     if (col === 6 || col === 7 || col === 18 || col === 19) {
-                        const spacer = document.createElement('div');
-                        spacer.className = 'seat-aisle-spacer';
-                        rowDiv.appendChild(spacer);
+                        const aisleSpacer = document.createElement('div');
+                        aisleSpacer.className = 'seat-aisle-spacer';
+                        rowDiv.appendChild(aisleSpacer);
                     } else {
-                        if (seatNum <= rowLimit) {
-                            const seatNo = `${letter}${seatNum}`;
-                            const seatBtn = document.createElement('button');
-                            seatBtn.className = 'seat';
-                            seatBtn.textContent = seatNum;
-
-                            const stateVal = seatStatesMap[seatNo];
-                            if (stateVal === 'user_booked') {
-                                seatBtn.classList.add('your-booking');
-                                seatBtn.title = `Your Seat ${seatNo} - Click to cancel`;
-                                seatBtn.onclick = () => selectSeatForCancellation(seatNo, seatBtn);
-                            } else if (stateVal === 'others_booked') {
-                                seatBtn.classList.add('booked');
-                                seatBtn.style.opacity = '0.35';
-                                seatBtn.style.pointerEvents = 'none';
-                                seatBtn.title = 'Reserved';
-                            } else {
-                                seatBtn.style.opacity = '0.2';
-                                seatBtn.style.pointerEvents = 'none';
-                                seatBtn.title = 'Available';
-                            }
+                        seatCounter++;
+                        if (seatCounter <= rowSeatsRemaining) {
+                            const seatNo = `${letter}${seatCounter}`;
+                            const seatBtn = createCancelSeatButton(seatNo, seatCounter, seatStatesMap[seatNo], false);
                             rowDiv.appendChild(seatBtn);
-                            seatNum++;
                         } else {
                             const emptySpacer = document.createElement('div');
-                            emptySpacer.style.width = '32px';
-                            emptySpacer.style.height = '32px';
+                            emptySpacer.className = 'seat-slot-empty';
                             rowDiv.appendChild(emptySpacer);
                         }
                     }
                 }
             }
+
+            // Right row label
+            const rightLabel = document.createElement('span');
+            rightLabel.className = 'row-label row-label-right';
+            rightLabel.textContent = letter;
+            rowDiv.appendChild(rightLabel);
+
             gridContainer.appendChild(rowDiv);
         }
     } else {
-        // Standard 10-column layout
+        // Standard non-IMAX cancellation layout (<= 120 seats):
+        // 10 columns with middle aisle
         const cols = 10;
-        const rowsCount = Math.ceil(displaySeats / cols);
+        const totalRows = Math.ceil(totalSeats / cols);
 
-        for (let r = 0; r < rowsCount; r++) {
-            const letter = rowLetters[r];
+        for (let r = 0; r < totalRows; r++) {
+            const letter = getRowLetter(r);
             const rowDiv = document.createElement('div');
-            rowDiv.className = 'seat-row';
+            rowDiv.className = 'seat-row standard-seat-row';
 
-            // Row letter on left
-            const label = document.createElement('span');
-            label.className = 'row-label';
-            label.textContent = letter;
-            rowDiv.appendChild(label);
+            // Left row label
+            const leftLabel = document.createElement('span');
+            leftLabel.className = 'row-label row-label-left';
+            leftLabel.textContent = letter;
+            rowDiv.appendChild(leftLabel);
+
+            const seatsInThisRow = (r === totalRows - 1)
+                ? (totalSeats - r * cols)
+                : cols;
 
             for (let c = 0; c < cols; c++) {
-                const seatNum = c + 1;
-                const seatNo = `${letter}${seatNum}`;
-
                 if (c === 5) {
-                    const spacer = document.createElement('div');
-                    spacer.className = 'seat-aisle-spacer';
-                    rowDiv.appendChild(spacer);
+                    const aisleSpacer = document.createElement('div');
+                    aisleSpacer.className = 'seat-aisle-spacer';
+                    rowDiv.appendChild(aisleSpacer);
                 }
 
-                const seatBtn = document.createElement('button');
-                seatBtn.className = 'seat';
-                seatBtn.textContent = seatNum;
-
-                const stateVal = seatStatesMap[seatNo];
-                if (stateVal === 'user_booked') {
-                    seatBtn.classList.add('your-booking');
-                    seatBtn.title = `Your Seat ${seatNo} - Click to cancel`;
-                    seatBtn.onclick = () => selectSeatForCancellation(seatNo, seatBtn);
-                } else if (stateVal === 'others_booked') {
-                    seatBtn.classList.add('booked');
-                    seatBtn.style.opacity = '0.35';
-                    seatBtn.style.pointerEvents = 'none';
-                    seatBtn.title = 'Reserved';
+                const seatNum = c + 1;
+                if (seatNum <= seatsInThisRow) {
+                    const seatNo = `${letter}${seatNum}`;
+                    const seatBtn = createCancelSeatButton(seatNo, seatNum, seatStatesMap[seatNo], false);
+                    rowDiv.appendChild(seatBtn);
                 } else {
-                    seatBtn.style.opacity = '0.2';
-                    seatBtn.style.pointerEvents = 'none';
-                    seatBtn.title = 'Available';
+                    const emptySpacer = document.createElement('div');
+                    emptySpacer.className = 'seat-slot-empty';
+                    rowDiv.appendChild(emptySpacer);
                 }
-
-                rowDiv.appendChild(seatBtn);
             }
+
+            // Right row label
+            const rightLabel = document.createElement('span');
+            rightLabel.className = 'row-label row-label-right';
+            rightLabel.textContent = letter;
+            rowDiv.appendChild(rightLabel);
+
             gridContainer.appendChild(rowDiv);
         }
     }
+}
+
+function createCancelSeatButton(seatNo, seatNum, stateVal, isElite = false) {
+    const seatBtn = document.createElement('button');
+    seatBtn.className = 'seat';
+    seatBtn.textContent = seatNum;
+    seatBtn.dataset.seatNo = seatNo;
+
+    if (isElite) {
+        seatBtn.classList.add('seat-elite');
+    }
+
+    if (stateVal === 'user_booked') {
+        const isSelectedForCancel = state.seatsSelectedForCancel.includes(seatNo);
+        if (isSelectedForCancel) {
+            seatBtn.classList.add('selected');
+        } else {
+            seatBtn.classList.add('your-booking');
+        }
+        seatBtn.title = `Your Seat ${seatNo} - Click to cancel`;
+        seatBtn.setAttribute('aria-label', `Your Seat ${seatNo}, select to cancel`);
+        seatBtn.onclick = () => selectSeatForCancellation(seatNo, seatBtn);
+    } else if (stateVal === 'others_booked') {
+        seatBtn.classList.add('booked');
+        seatBtn.style.opacity = '0.35';
+        seatBtn.disabled = true;
+        seatBtn.title = `Seat ${seatNo} (Reserved by someone else)`;
+        seatBtn.setAttribute('aria-label', `Seat ${seatNo}, reserved`);
+    } else {
+        seatBtn.classList.add('seat-available');
+        seatBtn.style.opacity = '0.2';
+        seatBtn.disabled = true;
+        seatBtn.title = `Seat ${seatNo} (Unoccupied)`;
+        seatBtn.setAttribute('aria-label', `Seat ${seatNo}, empty`);
+    }
+
+    return seatBtn;
 }
 
 function selectSeatForCancellation(seatNo, element) {
@@ -1387,8 +1501,10 @@ function selectSeatForCancellation(seatNo, element) {
 
     // Sort seats alphabetically
     state.seatsSelectedForCancel.sort((a, b) => {
-        const aRow = a[0], bRow = b[0];
-        const aNum = parseInt(a.slice(1)), bNum = parseInt(b.slice(1));
+        const aRow = a.replace(/[0-9]/g, '');
+        const bRow = b.replace(/[0-9]/g, '');
+        const aNum = parseInt(a.replace(/^[A-Z]+/, ''), 10);
+        const bNum = parseInt(b.replace(/^[A-Z]+/, ''), 10);
         if (aRow !== bRow) return aRow.localeCompare(bRow);
         return aNum - bNum;
     });
@@ -1407,7 +1523,27 @@ function updateCancellationDisplay() {
 
     // Enable/disable cancellation button
     const confirmBtn = document.getElementById('confirm-cancellation-btn');
-    confirmBtn.disabled = state.seatsSelectedForCancel.length === 0;
+    if (confirmBtn) {
+        confirmBtn.disabled = state.seatsSelectedForCancel.length === 0;
+    }
+
+    // Update Mobile Sticky Cancellation Bar
+    const mobileCancelBar = document.getElementById('mobile-sticky-cancel-bar');
+    const mobileCancelSeats = document.getElementById('mobile-cancel-bar-seats');
+    const mobileCancelRefund = document.getElementById('mobile-cancel-bar-refund');
+    const mobileCancelBtn = document.getElementById('mobile-bar-cancel-btn');
+
+    if (mobileCancelBar && mobileCancelSeats && mobileCancelRefund) {
+        if (state.seatsSelectedForCancel.length > 0) {
+            mobileCancelSeats.textContent = `${state.seatsSelectedForCancel.length} to Cancel (${seatsText})`;
+            mobileCancelRefund.textContent = `₹${totalRefund} Refund`;
+            mobileCancelBar.classList.remove('hidden');
+            if (mobileCancelBtn) mobileCancelBtn.disabled = false;
+        } else {
+            mobileCancelBar.classList.add('hidden');
+            if (mobileCancelBtn) mobileCancelBtn.disabled = true;
+        }
+    }
 }
 
 function handleConfirmCancellation() {

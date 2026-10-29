@@ -705,19 +705,22 @@ def parse_seat_input(seat_input: str) -> List[str]:
 # ─────────────────────────────────────────────────────────────────
 # STATIC FILES & ROOT
 # ─────────────────────────────────────────────────────────────────
-app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
 
 @app.get("/style.css")
 def read_style():
-    return FileResponse("frontend/style.css", headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+    return FileResponse(os.path.join(FRONTEND_DIR, "style.css"), headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
 @app.get("/app.js")
 def read_app_js():
-    return FileResponse("frontend/app.js", headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+    return FileResponse(os.path.join(FRONTEND_DIR, "app.js"), headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
 @app.get("/")
 def read_root():
-    return FileResponse("frontend/index.html", headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"), headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
 # ─────────────────────────────────────────────────────────────────
 # ROUTES

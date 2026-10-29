@@ -1,7 +1,10 @@
+import os
 import sqlite3
 
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "movie.db")
+
 # Create booked seats table
-conn = sqlite3.connect("movie.db")
+conn = sqlite3.connect(DB_PATH)
 cursor = conn.cursor()
 
 cursor.execute("""
@@ -27,7 +30,7 @@ class SeatBooking:
         self.load_seats()
 
     def load_seats(self):
-        conn = sqlite3.connect("movie.db")
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
         # Get total seats from movies table
@@ -159,7 +162,7 @@ class SeatBooking:
                 print(seat, "already reserved")
                 return
 
-        conn = sqlite3.connect("movie.db")
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
         for seat in requested:
@@ -182,7 +185,7 @@ def reserve_seat():
     
     # Show recommendations in CLI
     try:
-        conn = sqlite3.connect("movie.db")
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM movies WHERE id = ?", (movie_id,))
         row = cursor.fetchone()
