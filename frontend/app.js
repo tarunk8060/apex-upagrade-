@@ -642,7 +642,10 @@ async function proceedWithBooking(movie) {
         }
         document.getElementById('summary-movie-name').textContent = movie.name;
         document.getElementById('summary-movie-lang').textContent = movie.language;
-        document.getElementById('summary-movie-screen').textContent = movie.screen_no;
+        const audiSummary = (movie.screen_no || 'AUDI 1').trim();
+        const fmtSummary = (movie.screening_format || '').trim();
+        const screenSummaryDisplay = (fmtSummary && !audiSummary.includes('|')) ? `${audiSummary} | ${fmtSummary}` : audiSummary;
+        document.getElementById('summary-movie-screen').textContent = screenSummaryDisplay;
         document.getElementById('summary-movie-price').textContent = `₹${movie.price}`;
         document.getElementById('summary-movie-date').textContent = 'N/A';
         document.getElementById('summary-movie-time').textContent = 'N/A';
@@ -2010,7 +2013,7 @@ async function handleNewMovieSubmit(e) {
     const timingsInput = document.getElementById('admin-movie-timings').value.trim() || null;
 
     if (!formatInput) {
-        showToast('Please select a Screening Format (2D, 3D, IMAX, IMAX 3D)', 'error');
+        showToast('Please select a Screening Format (e.g. 2D, 3D, IMAX, IMAX 3D, Dolby Cinema, 4DX, ScreenX, P[XL])', 'error');
         return;
     }
 

@@ -226,16 +226,21 @@ try:
     check(f"add_movie adds {test_movie_id}", added_movie.get("id") == test_movie_id)
     check("add_movie persists screening_format and duration", added_movie.get("screening_format") == "IMAX 3D" and added_movie.get("duration") == "2h 45m")
 
-    # Test update_movie (PUT /movies/{movie_id})
+    # Test update_movie (PUT /movies/{movie_id}) across requested formats
+    for fmt_test in ["Dolby Cinema", "4DX", "ScreenX", "P[XL]", "IMAX", "IMAX 3D"]:
+        up_data = main.MovieUpdate(screening_format=fmt_test)
+        up_res = main.update_movie(test_movie_id, up_data, db)
+        check(f"update_movie supports format '{fmt_test}'", up_res.get("screening_format") == fmt_test)
+
     update_data = main.MovieUpdate(
         name="Automated Test Production - Remastered",
-        screening_format="3D",
+        screening_format="Dolby Cinema",
         duration="2h 55m",
         screen_no="AUDI 4"
     )
     updated_movie = main.update_movie(test_movie_id, update_data, db)
     check("update_movie updates name", updated_movie.get("name") == "Automated Test Production - Remastered")
-    check("update_movie updates screening_format to 3D", updated_movie.get("screening_format") == "3D")
+    check("update_movie updates screening_format to Dolby Cinema", updated_movie.get("screening_format") == "Dolby Cinema")
     check("update_movie updates duration to 2h 55m", updated_movie.get("duration") == "2h 55m")
     check("update_movie updates screen_no to AUDI 4", updated_movie.get("screen_no") == "AUDI 4")
 
