@@ -256,11 +256,27 @@ def init_db():
         )""")
         conn.commit()
 
-        # Migration: Add age_rating column to movies table if it does not exist
+        # Migration: Add age_rating, duration, screening_format columns to movies table if they do not exist
         cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name='movies' AND column_name='age_rating'")
         if not cur.fetchone():
             try:
                 cur.execute("ALTER TABLE movies ADD COLUMN age_rating TEXT DEFAULT 'U'")
+                conn.commit()
+            except Exception:
+                conn.rollback()
+
+        cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name='movies' AND column_name='duration'")
+        if not cur.fetchone():
+            try:
+                cur.execute("ALTER TABLE movies ADD COLUMN duration TEXT DEFAULT '2h 30m'")
+                conn.commit()
+            except Exception:
+                conn.rollback()
+
+        cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name='movies' AND column_name='screening_format'")
+        if not cur.fetchone():
+            try:
+                cur.execute("ALTER TABLE movies ADD COLUMN screening_format TEXT DEFAULT '2D'")
                 conn.commit()
             except Exception:
                 conn.rollback()
@@ -416,6 +432,20 @@ def init_db():
             if "age_rating" not in cols:
                 try:
                     cursor.execute("ALTER TABLE movies ADD COLUMN age_rating TEXT DEFAULT 'U'")
+                    conn.commit()
+                except Exception:
+                    pass
+
+            if "duration" not in cols:
+                try:
+                    cursor.execute("ALTER TABLE movies ADD COLUMN duration TEXT DEFAULT '2h 30m'")
+                    conn.commit()
+                except Exception:
+                    pass
+
+            if "screening_format" not in cols:
+                try:
+                    cursor.execute("ALTER TABLE movies ADD COLUMN screening_format TEXT DEFAULT '2D'")
                     conn.commit()
                 except Exception:
                     pass
@@ -653,12 +683,27 @@ class MovieBase(BaseModel):
     language: str = Field(..., json_schema_extra={"example": "Tamil"})
     price: int = Field(..., json_schema_extra={"example": 150})
     seats_available: int = Field(..., json_schema_extra={"example": 90})
-    screen_no: str = Field(..., json_schema_extra={"example": "A1"})
+    screen_no: str = Field(..., json_schema_extra={"example": "AUDI 2"})
     image_url: Optional[str] = Field(None, json_schema_extra={"example": "https://image.tmdb.org/t/p/w500/abc.jpg"})
     age_rating: Optional[str] = Field("U", json_schema_extra={"example": "U"})
+    duration: Optional[str] = Field("2h 30m", json_schema_extra={"example": "2h 45m"})
+    screening_format: Optional[str] = Field("2D", json_schema_extra={"example": "IMAX"})
 
 class MovieCreate(MovieBase):
     show_timings: Optional[str] = Field(None, json_schema_extra={"example": "02:30 PM, 06:30 PM"})
+
+class MovieUpdate(BaseModel):
+    name: Optional[str] = None
+    genre: Optional[str] = None
+    language: Optional[str] = None
+    price: Optional[int] = None
+    seats_available: Optional[int] = None
+    screen_no: Optional[str] = None
+    image_url: Optional[str] = None
+    age_rating: Optional[str] = None
+    duration: Optional[str] = None
+    screening_format: Optional[str] = None
+    show_timings: Optional[str] = None
 
 class RecommendationResponse(BaseModel):
     title: str
@@ -846,7 +891,7 @@ def read_favicon_ico():
 def list_movies(db=Depends(get_db)):
     cursor = get_cursor(db)
     cursor.execute(
-        "SELECT id, name, genre, language, price, seats_available, screen_no, image_url, age_rating FROM movies"
+        "SELECT id, name, genre, language, price, seats_available, screen_no, image_url, age_rating, duration, screening_format FROM movies"
     )
     rows = cursor.fetchall()
     return [dict(row) for row in rows]
@@ -908,7 +953,7 @@ def debug_db():
 def get_movie(movie_id: str, db=Depends(get_db)):
     cursor = get_cursor(db)
     cursor.execute(
-        f"SELECT id, name, genre, language, price, seats_available, screen_no, image_url, age_rating "
+        f"SELECT id, name, genre, language, price, seats_available, screen_no, image_url, age_rating, duration, screening_format "
         f"FROM movies WHERE id = {PH}",
         (movie_id,)
     )
@@ -937,11 +982,14 @@ def add_movie(movie: MovieCreate, db=Depends(get_db)):
 
     try:
         seats_capacity = normalize_seat_capacity(movie.seats_available)
+        movie_duration = (movie.duration or "2h 30m").strip()
+        movie_format = (movie.screening_format or "2D").strip()
         cursor.execute(
-            f"INSERT INTO movies(id, name, genre, language, price, seats_available, screen_no, image_url, age_rating) "
-            f"VALUES ({PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH})",
+            f"INSERT INTO movies(id, name, genre, language, price, seats_available, screen_no, image_url, age_rating, duration, screening_format) "
+            f"VALUES ({PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH}, {PH})",
             (movie.id, movie.name, movie.genre, movie.language,
-             movie.price, seats_capacity, movie.screen_no, movie.image_url, movie.age_rating)
+             movie.price, seats_capacity, movie.screen_no, movie.image_url, movie.age_rating,
+             movie_duration, movie_format)
         )
         db.commit()
 
@@ -970,6 +1018,60 @@ def add_movie(movie: MovieCreate, db=Depends(get_db)):
     movie_dict = movie.model_dump()
     movie_dict["recommendations"] = []
     return movie_dict
+
+# 3.1 Update movie
+@app.put("/movies/{movie_id}", response_model=MovieResponse)
+def update_movie(movie_id: str, movie_update: MovieUpdate, db=Depends(get_db)):
+    cursor = get_cursor(db)
+    cursor.execute(f"SELECT * FROM movies WHERE id = {PH}", (movie_id,))
+    existing = cursor.fetchone()
+    if not existing:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    
+    current = dict(existing)
+    new_name = movie_update.name if movie_update.name is not None else current["name"]
+    new_genre = movie_update.genre if movie_update.genre is not None else current["genre"]
+    new_lang = movie_update.language if movie_update.language is not None else current["language"]
+    new_price = movie_update.price if movie_update.price is not None else current["price"]
+    new_seats = normalize_seat_capacity(movie_update.seats_available) if movie_update.seats_available is not None else current["seats_available"]
+    new_screen = movie_update.screen_no if movie_update.screen_no is not None else current["screen_no"]
+    new_image = movie_update.image_url if movie_update.image_url is not None else current["image_url"]
+    new_rating = movie_update.age_rating if movie_update.age_rating is not None else current.get("age_rating", "U")
+    new_duration = movie_update.duration if movie_update.duration is not None else current.get("duration", "2h 30m")
+    new_format = movie_update.screening_format if movie_update.screening_format is not None else current.get("screening_format", "2D")
+
+    try:
+        cursor.execute(
+            f"UPDATE movies SET name = {PH}, genre = {PH}, language = {PH}, price = {PH}, seats_available = {PH}, "
+            f"screen_no = {PH}, image_url = {PH}, age_rating = {PH}, duration = {PH}, screening_format = {PH} "
+            f"WHERE id = {PH}",
+            (new_name, new_genre, new_lang, new_price, new_seats, new_screen, new_image, new_rating, new_duration, new_format, movie_id)
+        )
+        db.commit()
+
+        # Update timings if provided
+        if movie_update.show_timings:
+            times_list = [t.strip() for t in movie_update.show_timings.split(",") if t.strip()]
+            if times_list:
+                seed_default_showtimes_for_movie(cursor, movie_id, USE_POSTGRES, times_list)
+                db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error while updating movie: {e}")
+
+    cursor.execute(
+        f"SELECT id, name, genre, language, price, seats_available, screen_no, image_url, age_rating, duration, screening_format "
+        f"FROM movies WHERE id = {PH}",
+        (movie_id,)
+    )
+    row = cursor.fetchone()
+    res_dict = dict(row)
+    try:
+        from recommender.recommendation_engine import get_recommendations
+        res_dict["recommendations"] = get_recommendations(res_dict["name"], top_n=3)
+    except Exception:
+        res_dict["recommendations"] = []
+    return res_dict
 
 # 4. Delete movie
 @app.delete("/movies/{movie_id}")

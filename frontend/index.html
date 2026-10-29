@@ -16,7 +16,7 @@
         rel="stylesheet">
     <!-- FontAwesome for cinematic iconography -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
 </head>
 
 <body class="dark-theme">
@@ -473,18 +473,18 @@
                         <i class="fa-solid fa-film"></i> Movie Catalog
                     </button>
                     <button id="admin-tab-btn-admins" class="admin-tab-item hidden" onclick="switchAdminTab('admins')">
-                        <i class="fa-solid fa-user-shield"></i> System Administrators <span class="badge-pill-tarun">Tarun Only</span>
+                        <i class="fa-solid fa-user-shield"></i> System Administrators
                     </button>
                 </div>
 
                 <!-- Section A: Movie Management Grid -->
                 <div id="admin-section-movies" class="admin-grid-layout">
-                    <!-- Left: Add movie card -->
+                    <!-- Left: Add/Edit movie card -->
                     <div class="admin-card glass-panel">
                         <div class="panel-accent-bar accent-blue"></div>
-                        <h3 class="panel-title"><i class="fa-solid fa-circle-plus"></i> Add New Movie</h3>
+                        <h3 class="panel-title" id="admin-movie-form-title"><i class="fa-solid fa-circle-plus"></i> Add New Movie</h3>
 
-                        <form onsubmit="handleNewMovieSubmit(event)">
+                        <form id="admin-movie-form" onsubmit="handleNewMovieSubmit(event)">
                             <div class="form-group">
                                 <input type="text" id="admin-movie-id" placeholder="Movie ID (e.g. MOV006)" required>
                             </div>
@@ -492,22 +492,34 @@
                                 <input type="text" id="admin-movie-title" placeholder="Movie Title" required>
                             </div>
                             <div class="form-group">
-                                <input type="text" id="admin-movie-genre" placeholder="Genre (e.g. Action)" required>
+                                <input type="text" id="admin-movie-genre" placeholder="Genre (e.g. Action, Sci-Fi)" required>
                             </div>
                             <div class="form-group">
                                 <input type="text" id="admin-movie-lang" placeholder="Language (e.g. English)" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="text" id="admin-movie-duration" placeholder="Movie Duration (e.g. 2h 45m)" required>
                             </div>
                             <div class="form-group">
                                 <input type="number" id="admin-movie-price" placeholder="Ticket Price (INR)" required
                                     min="1">
                             </div>
                             <div class="form-group">
-                                <input type="number" id="admin-movie-seats" placeholder="Total Theatre Seats" required
+                                <input type="number" id="admin-movie-seats" placeholder="Total Theatre Seats (e.g. 140)" required
                                     min="1">
                             </div>
                             <div class="form-group">
                                 <input type="text" id="admin-movie-screen"
-                                    placeholder="Screen Number/Type (e.g. Screen 1)" required>
+                                    placeholder="Auditorium Number (e.g. AUDI 2)" required>
+                            </div>
+                            <div class="form-group">
+                                <select id="admin-movie-format" style="width: 100%; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; transition: var(--transition-smooth);" required>
+                                    <option value="" disabled selected hidden>Select Screening Format</option>
+                                    <option value="2D" style="background-color: #1a1a1a; color: #fff;">2D</option>
+                                    <option value="3D" style="background-color: #1a1a1a; color: #fff;">3D</option>
+                                    <option value="IMAX" style="background-color: #1a1a1a; color: #fff;">IMAX</option>
+                                    <option value="IMAX 3D" style="background-color: #1a1a1a; color: #fff;">IMAX 3D</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <input type="url" id="admin-movie-image"
@@ -525,7 +537,8 @@
                                 <input type="text" id="admin-movie-timings"
                                     placeholder="Show Timings (comma-separated, e.g. 11:00 AM, 04:30 PM)">
                             </div>
-                            <button type="submit" class="btn btn-primary btn-block">Add Movie to Database</button>
+                            <button type="submit" id="admin-movie-submit-btn" class="btn btn-primary btn-block">Add Movie to Database</button>
+                            <button type="button" id="admin-movie-cancel-btn" class="btn btn-secondary btn-block hidden" onclick="cancelMovieEdit()" style="margin-top: 8px;"><i class="fa-solid fa-xmark"></i> Cancel Edit</button>
                         </form>
                     </div>
 
@@ -546,7 +559,6 @@
                         <div class="panel-accent-bar accent-purple"></div>
                         <div class="panel-header-flex">
                             <h3 class="panel-title"><i class="fa-solid fa-user-plus"></i> Add New Administrator</h3>
-                            <span class="badge-role-tarun"><i class="fa-solid fa-crown"></i> Tarun Access</span>
                         </div>
                         <p class="panel-subtitle" style="margin-bottom: 16px;">Create a secondary administrator and set their login credentials</p>
 
@@ -710,7 +722,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
 </body>
 
 </html>

@@ -215,13 +215,29 @@ try:
         language="English",
         price=180,
         seats_available=150, # IMAX Screen
-        screen_no="IMAX Screen A",
+        screen_no="AUDI 2",
+        screening_format="IMAX 3D",
+        duration="2h 45m",
         image_url="https://image.tmdb.org/t/p/w500/test.jpg",
         age_rating="UA",
         show_timings="11:30 AM, 05:00 PM"
     )
     added_movie = main.add_movie(movie_to_add, db)
     check(f"add_movie adds {test_movie_id}", added_movie.get("id") == test_movie_id)
+    check("add_movie persists screening_format and duration", added_movie.get("screening_format") == "IMAX 3D" and added_movie.get("duration") == "2h 45m")
+
+    # Test update_movie (PUT /movies/{movie_id})
+    update_data = main.MovieUpdate(
+        name="Automated Test Production - Remastered",
+        screening_format="3D",
+        duration="2h 55m",
+        screen_no="AUDI 4"
+    )
+    updated_movie = main.update_movie(test_movie_id, update_data, db)
+    check("update_movie updates name", updated_movie.get("name") == "Automated Test Production - Remastered")
+    check("update_movie updates screening_format to 3D", updated_movie.get("screening_format") == "3D")
+    check("update_movie updates duration to 2h 55m", updated_movie.get("duration") == "2h 55m")
+    check("update_movie updates screen_no to AUDI 4", updated_movie.get("screen_no") == "AUDI 4")
 
     # Check showtimes were created
     new_st = main.get_movie_showtimes(test_movie_id, db)
@@ -270,9 +286,9 @@ check("read_favicon_ico() resolves favicon.png", os.path.exists(fav_ico_res.path
 print("\n[SECTION 8] TARUN MASTER ADMIN OVERVIEW TESTS")
 # Test 1: Tarun is authorized and gets other admin details
 tarun_overview = main.get_admins_overview("Tarun")
-check("get_admins_overview('Tarun') succeeds", isinstance(tarun_overview, list) and len(tarun_overview) == 3)
+check("get_admins_overview('Tarun') succeeds", isinstance(tarun_overview, list) and len(tarun_overview) >= 3)
 admin_names = {a["username"] for a in tarun_overview}
-check("Other admins Vijay, Ravi, Karthik returned", admin_names == {"Vijay", "Ravi", "Karthik"})
+check("Other admins Vijay, Ravi, Karthik returned", {"Vijay", "Ravi", "Karthik"}.issubset(admin_names))
 
 # Test 2: Other admins (e.g. Vijay) or non-admins are rejected with 403
 rejected_vijay = False

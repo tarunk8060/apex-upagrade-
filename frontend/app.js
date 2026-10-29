@@ -529,39 +529,68 @@ async function loadCatalog() {
             if (ratingVal === 'A' || ratingVal === '18+') badgeColorClass = 'badge-a';
             else if (ratingVal === 'UA' || ratingVal === 'PG') badgeColorClass = 'badge-ua';
 
+            // Build screen display string: "AUDI number | FORMAT"
+            let audiStr = (movie.screen_no || 'AUDI 1').trim();
+            if (/^\d+$/.test(audiStr)) {
+                audiStr = `AUDI ${audiStr}`;
+            } else if (/^Screen\s+(\d+)$/i.test(audiStr)) {
+                const match = audiStr.match(/^Screen\s+(\d+)$/i);
+                audiStr = `AUDI ${match[1]}`;
+            }
+
+            const formatStr = (movie.screening_format || '2D').trim();
+            let screenDisplay = '';
+            if (audiStr.includes('|')) {
+                screenDisplay = audiStr;
+            } else {
+                screenDisplay = `${audiStr} | ${formatStr}`;
+            }
+
+            // Build genre chips
+            const rawGenre = (movie.genre || 'Action').trim();
+            const genreChips = rawGenre.split(/[,/|]+|\s{2,}/).map(g => g.trim()).filter(Boolean);
+            const genreChipsHTML = (genreChips.length > 0 ? genreChips : [rawGenre])
+                .map(g => `<span class="movie-genre-chip">${escapeHTML(g)}</span>`)
+                .join('');
+
             card.innerHTML = `
                 <div class="card-top-accent"></div>
                 ${posterHTML}
                 <div class="movie-card-body">
-                    <h3 class="movie-title">${escapeHTML(movie.name)}</h3>
-                    <div class="movie-details-list">
-                        <div class="detail-item">
-                            <span class="label">🏷️ Genre:</span>
-                            <span class="value">${escapeHTML(movie.genre || 'N/A')}</span>
+                    <div class="movie-card-header">
+                        <h3 class="movie-title" title="${escapeHTML(movie.name)}">${escapeHTML(movie.name)}</h3>
+                        <span class="badge-rating ${badgeColorClass}">${escapeHTML(ratingVal)}</span>
+                    </div>
+
+                    <div class="movie-genres-row">
+                        ${genreChipsHTML}
+                    </div>
+
+                    <div class="movie-info-grid">
+                        <div class="movie-info-col left-col">
+                            <div class="info-cell">
+                                <span class="info-label"><i class="fa-solid fa-tv"></i> Screen:</span>
+                                <span class="info-value highlight-screen">${escapeHTML(screenDisplay)}</span>
+                            </div>
+                            <div class="info-cell">
+                                <span class="info-label"><i class="fa-solid fa-clock"></i> Duration:</span>
+                                <span class="info-value">${escapeHTML(movie.duration || '2h 30m')}</span>
+                            </div>
                         </div>
-                        <div class="detail-item">
-                            <span class="label">🗣️ Language:</span>
-                            <span class="value">${escapeHTML(movie.language)}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">🖥️ Screen:</span>
-                            <span class="value">${escapeHTML(movie.screen_no)}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">🎟️ Ticket Price:</span>
-                            <span class="value price-tag">₹${movie.price}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">🪑 Total Capacity:</span>
-                            <span class="value">${movie.seats_available} Seats</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">  Rating:</span>
-                            <span class="value badge-rating ${badgeColorClass}">${escapeHTML(ratingVal)}</span>
+                        <div class="movie-info-col right-col">
+                            <div class="info-cell">
+                                <span class="info-label"><i class="fa-solid fa-language"></i> Language:</span>
+                                <span class="info-value">${escapeHTML(movie.language)}</span>
+                            </div>
+                            <div class="info-cell">
+                                <span class="info-label"><i class="fa-solid fa-ticket"></i> Ticket Price:</span>
+                                <span class="info-value price-tag">₹${movie.price}</span>
+                            </div>
                         </div>
                     </div>
-                    <button class="btn btn-primary btn-block" onclick="startBooking('${movie.id}')">
-                        Book Tickets
+
+                    <button class="btn btn-primary btn-block btn-book-tickets" onclick="startBooking('${movie.id}')">
+                        <i class="fa-solid fa-ticket"></i> Book Tickets
                     </button>
                 </div>
             `;
@@ -1743,14 +1772,25 @@ async function loadAdminPanel() {
         movies.forEach(movie => {
             const row = document.createElement('div');
             row.className = 'admin-movie-row';
+
+            let audi = (movie.screen_no || 'AUDI 1').trim();
+            if (/^\d+$/.test(audi)) audi = `AUDI ${audi}`;
+            const fmt = (movie.screening_format || '2D').trim();
+            const screenDisplay = audi.includes('|') ? audi : `${audi} | ${fmt}`;
+
             row.innerHTML = `
                 <div class="admin-movie-info">
                     <h4>${escapeHTML(movie.name)}</h4>
-                    <p>ID: ${movie.id} | Genre: ${escapeHTML(movie.genre || 'N/A')} | Price: ₹${movie.price} | Screen: ${escapeHTML(movie.screen_no)}</p>
+                    <p>ID: ${movie.id} | ${escapeHTML(screenDisplay)} | Duration: ${escapeHTML(movie.duration || '2h 30m')} | Price: ₹${movie.price} | Seats: ${movie.seats_available}</p>
                 </div>
-                <button class="btn btn-danger btn-sm" onclick="deleteMovie('${movie.id}')">
-                    <i class="fa-solid fa-trash-can"></i> Delete
-                </button>
+                <div class="admin-movie-actions" style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="editMovie('${movie.id}')" title="Edit Movie">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteMovie('${movie.id}')" title="Delete Movie">
+                        <i class="fa-solid fa-trash-can"></i> Delete
+                    </button>
+                </div>
             `;
             list.appendChild(row);
         });
@@ -1867,14 +1907,18 @@ async function handleNewAdminSubmit(e) {
     }
 }
 
-async function deleteAdminUser(username) {
+function deleteAdminUser(username) {
     if (!username) return;
-    openCustomConfirmModal({
-        title: 'Revoke Administrator Access',
-        message: `Are you sure you want to revoke admin privileges and delete administrator account "${username}"? They will no longer be able to log in.`,
-        confirmText: 'Yes, Revoke Access',
-        cancelText: 'Cancel',
+    showModal({
         type: 'danger',
+        icon: 'fa-trash-can',
+        title: 'Revoke Administrator Access?',
+        subtitle: `Are you sure you want to revoke admin privileges and delete administrator account "${username}"? They will no longer be able to log in.`,
+        details: [
+            { label: 'Administrator', value: username }
+        ],
+        confirmLabel: 'Yes, Revoke Access',
+        confirmIcon: 'fa-trash-can',
         onConfirm: async () => {
             try {
                 const requester = state.currentUser ? state.currentUser.username : 'Tarun';
@@ -1890,6 +1934,65 @@ async function deleteAdminUser(username) {
     });
 }
 
+function editMovie(movieId) {
+    const movie = state.movies.find(m => m.id === movieId);
+    if (!movie) return;
+
+    state.editingMovieId = movieId;
+
+    document.getElementById('admin-movie-id').value = movie.id;
+    document.getElementById('admin-movie-id').disabled = true;
+    document.getElementById('admin-movie-title').value = movie.name;
+    document.getElementById('admin-movie-genre').value = movie.genre || '';
+    document.getElementById('admin-movie-lang').value = movie.language;
+    document.getElementById('admin-movie-duration').value = movie.duration || '2h 30m';
+    document.getElementById('admin-movie-price').value = movie.price;
+    document.getElementById('admin-movie-seats').value = movie.seats_available;
+    document.getElementById('admin-movie-screen').value = movie.screen_no;
+    document.getElementById('admin-movie-format').value = movie.screening_format || '2D';
+    document.getElementById('admin-movie-image').value = movie.image_url || '';
+    document.getElementById('admin-movie-rating').value = movie.age_rating || 'U';
+
+    const formTitle = document.getElementById('admin-movie-form-title');
+    if (formTitle) formTitle.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit Movie: ${escapeHTML(movie.name)}`;
+
+    const submitBtn = document.getElementById('admin-movie-submit-btn');
+    if (submitBtn) submitBtn.textContent = 'Update Movie';
+
+    const cancelBtn = document.getElementById('admin-movie-cancel-btn');
+    if (cancelBtn) cancelBtn.classList.remove('hidden');
+
+    const formEl = document.getElementById('admin-movie-form');
+    if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function cancelMovieEdit() {
+    state.editingMovieId = null;
+
+    document.getElementById('admin-movie-id').value = '';
+    document.getElementById('admin-movie-id').disabled = false;
+    document.getElementById('admin-movie-title').value = '';
+    document.getElementById('admin-movie-genre').value = '';
+    document.getElementById('admin-movie-lang').value = '';
+    document.getElementById('admin-movie-duration').value = '';
+    document.getElementById('admin-movie-price').value = '';
+    document.getElementById('admin-movie-seats').value = '';
+    document.getElementById('admin-movie-screen').value = '';
+    document.getElementById('admin-movie-format').value = '';
+    document.getElementById('admin-movie-image').value = '';
+    document.getElementById('admin-movie-rating').value = '';
+    document.getElementById('admin-movie-timings').value = '';
+
+    const formTitle = document.getElementById('admin-movie-form-title');
+    if (formTitle) formTitle.innerHTML = `<i class="fa-solid fa-circle-plus"></i> Add New Movie`;
+
+    const submitBtn = document.getElementById('admin-movie-submit-btn');
+    if (submitBtn) submitBtn.textContent = 'Add Movie to Database';
+
+    const cancelBtn = document.getElementById('admin-movie-cancel-btn');
+    if (cancelBtn) cancelBtn.classList.add('hidden');
+}
+
 async function handleNewMovieSubmit(e) {
     e.preventDefault();
 
@@ -1897,45 +2000,54 @@ async function handleNewMovieSubmit(e) {
     const titleInput = document.getElementById('admin-movie-title').value.trim();
     const genreInput = document.getElementById('admin-movie-genre').value.trim();
     const langInput = document.getElementById('admin-movie-lang').value.trim();
+    const durationInput = document.getElementById('admin-movie-duration').value.trim() || '2h 30m';
     const priceInput = parseInt(document.getElementById('admin-movie-price').value);
     const seatsInput = parseInt(document.getElementById('admin-movie-seats').value);
     const screenInput = document.getElementById('admin-movie-screen').value.trim();
+    const formatInput = document.getElementById('admin-movie-format').value || '2D';
     const imageInput = document.getElementById('admin-movie-image').value.trim() || null;
     const ratingInput = document.getElementById('admin-movie-rating').value || 'U';
     const timingsInput = document.getElementById('admin-movie-timings').value.trim() || null;
 
+    if (!formatInput) {
+        showToast('Please select a Screening Format (2D, 3D, IMAX, IMAX 3D)', 'error');
+        return;
+    }
+
+    const payload = {
+        name: titleInput,
+        genre: genreInput,
+        language: langInput,
+        price: priceInput,
+        seats_available: seatsInput,
+        screen_no: screenInput,
+        screening_format: formatInput,
+        duration: durationInput,
+        image_url: imageInput,
+        age_rating: ratingInput,
+        show_timings: timingsInput
+    };
+
     try {
-        await apiRequest('/movies', {
-            method: 'POST',
-            body: JSON.stringify({
-                id: idInput,
-                name: titleInput,
-                genre: genreInput,
-                language: langInput,
-                price: priceInput,
-                seats_available: seatsInput,
-                screen_no: screenInput,
-                image_url: imageInput,
-                age_rating: ratingInput,
-                show_timings: timingsInput
-            })
-        });
+        if (state.editingMovieId) {
+            await apiRequest(`/movies/${state.editingMovieId}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+            showToast(`Successfully updated movie '${titleInput}'!`, 'success');
+            cancelMovieEdit();
+        } else {
+            payload.id = idInput;
+            await apiRequest('/movies', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            showToast(`Successfully added movie '${titleInput}' to theater!`, 'success');
+            cancelMovieEdit();
+        }
 
-        showToast(`Successfully added movie '${titleInput}' to theater!`, 'success');
-
-        // Reset Form Inputs
-        document.getElementById('admin-movie-id').value = '';
-        document.getElementById('admin-movie-title').value = '';
-        document.getElementById('admin-movie-genre').value = '';
-        document.getElementById('admin-movie-lang').value = '';
-        document.getElementById('admin-movie-price').value = '';
-        document.getElementById('admin-movie-seats').value = '';
-        document.getElementById('admin-movie-screen').value = '';
-        document.getElementById('admin-movie-image').value = '';
-        document.getElementById('admin-movie-rating').value = '';
-        document.getElementById('admin-movie-timings').value = '';
-
-        loadAdminPanel();
+        await loadCatalog();
+        await loadAdminMoviesList();
     } catch (err) {
         showToast(err.message, 'error');
     }
