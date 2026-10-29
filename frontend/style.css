@@ -934,20 +934,41 @@ body {
     box-shadow: 0 0 12px rgba(0, 176, 255, 0.45) !important;
 }
 
-/* Premium / Elite Row A Marker */
+/* Premium / Elite Row A Styling - Distinct Golden Luxury Hue */
 .seat.seat-elite {
-    border-top: 2.5px solid #ffb300;
+    background: linear-gradient(145deg, #d97706, #b45309) !important;
+    color: #ffffff !important;
+    border: 1.5px solid #fbbf24 !important;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.45);
+    font-weight: 700;
 }
 
-.seat.seat-elite::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    width: 4px;
-    height: 4px;
-    background: #ffb300;
-    border-radius: 50%;
-    opacity: 0.9;
+.seat.seat-elite:hover {
+    background: linear-gradient(145deg, #f59e0b, #d97706) !important;
+    border-color: #fde68a !important;
+    transform: scale(1.12);
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+}
+
+.seat.seat-elite.selected {
+    background: var(--seat-selected) !important;
+    color: #ffffff !important;
+    border-color: #69f0ae !important;
+    box-shadow: 0 0 14px rgba(76, 175, 80, 0.7) !important;
+}
+
+.seat.seat-elite.booked {
+    background: var(--seat-booked) !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    border-color: rgba(211, 47, 47, 0.4) !important;
+    box-shadow: none !important;
+}
+
+.seat.seat-elite.your-booking {
+    background: var(--seat-your-booking) !important;
+    color: #ffffff !important;
+    border-color: #00b0ff !important;
+    box-shadow: 0 0 12px rgba(0, 176, 255, 0.6) !important;
 }
 
 /* Precise Aisle Spacers & Empty Slots matching seat size */
@@ -1015,8 +1036,9 @@ body {
 }
 
 .legend-box.seat-elite-legend {
-    background-color: var(--seat-available);
-    border-top: 2.5px solid #ffb300;
+    background: linear-gradient(145deg, #d97706, #b45309);
+    border: 1.5px solid #fbbf24;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
 }
 
 /* Checkout Receipt Summary Panel */
@@ -1748,13 +1770,16 @@ body {
         top: 0;
         left: 0;
         right: 0;
-        height: 58px;
+        width: 100%;
+        max-width: 100vw;
+        height: 60px;
         background: var(--bg-top-nav);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         border-bottom: 1px solid var(--border-color);
         padding: 0 16px;
-        z-index: 1000;
+        z-index: 1050;
+        box-sizing: border-box;
         transition: background-color 0.3s ease, border-color 0.3s ease;
     }
 
@@ -1764,16 +1789,18 @@ body {
         letter-spacing: 1.5px;
         cursor: pointer;
         color: var(--top-nav-brand-color);
+        flex-shrink: 0;
     }
 
     .mobile-nav-actions {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
     }
 
     .mobile-theme-btn,
-    .mobile-menu-toggle {
+    .mobile-menu-toggle,
+    .mobile-nav-admin-btn {
         background: var(--top-nav-btn-bg);
         border: 1px solid var(--border-color);
         color: var(--top-nav-btn-color);
@@ -1786,6 +1813,17 @@ body {
         font-size: 16px;
         cursor: pointer;
         transition: var(--transition-smooth);
+        flex-shrink: 0;
+    }
+
+    .mobile-nav-admin-btn {
+        color: var(--admin-purple) !important;
+        border-color: rgba(156, 39, 176, 0.4);
+        background: rgba(156, 39, 176, 0.12);
+    }
+
+    .mobile-nav-admin-btn:hover {
+        background: rgba(156, 39, 176, 0.25);
     }
 
     .mobile-theme-btn:hover,
@@ -2470,4 +2508,170 @@ body {
     background: linear-gradient(135deg, rgba(156, 39, 176, 0.2), rgba(33, 150, 243, 0.2)) !important;
     border: 1px solid rgba(0, 0, 0, 0.15) !important;
     color: #333333 !important;
+}
+
+/* -------------------------------------------------------------
+   LEFT-ALIGNED ADMIN HEADER & DEDICATED ADMIN TABS
+   ------------------------------------------------------------- */
+.view-header.view-header-left {
+    text-align: left;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.view-header.view-header-left h2 {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+}
+
+.view-header.view-header-left .subtitle {
+    margin-top: 6px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* Dedicated Admin Tab Bar */
+.admin-tab-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.admin-tab-item {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition-smooth);
+}
+
+.admin-tab-item:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-tab-item.active {
+    background: rgba(156, 39, 176, 0.14);
+    border-color: rgba(156, 39, 176, 0.45);
+    color: #ce93d8;
+    box-shadow: 0 4px 16px rgba(156, 39, 176, 0.15);
+}
+
+.light-theme .admin-tab-item.active {
+    background: rgba(156, 39, 176, 0.1);
+    color: #7b1fa2;
+}
+
+.badge-pill-tarun {
+    background: rgba(229, 9, 20, 0.18);
+    color: var(--cinema-red);
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Admin Form Labels & Password Input Wrapper */
+.admin-form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.password-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrap input {
+    width: 100%;
+    padding-right: 44px;
+}
+
+.btn-toggle-pass {
+    position: absolute;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px;
+    font-size: 14px;
+    transition: var(--transition-smooth);
+}
+
+.btn-toggle-pass:hover {
+    color: var(--text-primary);
+}
+
+/* Admins Details Vertical List Layout */
+.admins-details-vertical-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: 520px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.admin-card-actions-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-xs {
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.admin-pwd-text {
+    background: rgba(0, 0, 0, 0.25);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #ffca28;
+    letter-spacing: 1px;
+}
+
+.btn-reveal-pwd {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    margin-left: 6px;
+    font-size: 12px;
+    padding: 2px 4px;
+    transition: var(--transition-smooth);
+}
+
+.btn-reveal-pwd:hover {
+    color: var(--tech-blue);
+}
+
+.panel-header-flex {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
 }

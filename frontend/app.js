@@ -340,10 +340,13 @@ function onLoginSuccess() {
 
     // Hide/show admin panel buttons based on role
     const adminNav = document.getElementById('nav-btn-admin');
+    const mobileAdminNav = document.getElementById('mobile-nav-admin');
     if (state.currentUser.role === 'admin') {
-        adminNav.classList.remove('hidden-admin');
+        if (adminNav) adminNav.classList.remove('hidden-admin');
+        if (mobileAdminNav) mobileAdminNav.classList.remove('hidden-admin');
     } else {
-        adminNav.classList.add('hidden-admin');
+        if (adminNav) adminNav.classList.add('hidden-admin');
+        if (mobileAdminNav) mobileAdminNav.classList.add('hidden-admin');
     }
 
     // Restore active view or navigate to default
@@ -406,6 +409,9 @@ function showView(viewName) {
         showView('catalog');
         return;
     }
+
+    // Reset window scroll position so switching views always starts cleanly at the top
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 
     // Close mobile drawer on navigation
     closeMobileNav();
@@ -745,6 +751,16 @@ async function selectShowtime(showtimeId) {
         }
 
         renderSeatGrid(state.selectedMovie.seats_available, seatStatesMap);
+
+        // On mobile, gently scroll to the screen & seat layout
+        if (window.innerWidth <= 768) {
+            const screenEl = document.querySelector('#view-booking .cinema-screen-container');
+            if (screenEl) {
+                setTimeout(() => {
+                    screenEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 80);
+            }
+        }
     } catch (err) {
         showToast('Error loading seats: ' + err.message, 'error');
     }
@@ -1627,19 +1643,71 @@ function handleConfirmCancellation() {
 // -------------------------------------------------------------
 // VIEW 4: ADMIN OPERATIONS VIEW
 // -------------------------------------------------------------
+function switchAdminTab(tabName) {
+    const moviesTabBtn = document.getElementById('admin-tab-btn-movies');
+    const adminsTabBtn = document.getElementById('admin-tab-btn-admins');
+    const moviesSection = document.getElementById('admin-section-movies');
+    const adminsSection = document.getElementById('admin-section-admins');
+
+    if (tabName === 'admins') {
+        if (moviesTabBtn) moviesTabBtn.classList.remove('active');
+        if (adminsTabBtn) adminsTabBtn.classList.add('active');
+        if (moviesSection) moviesSection.classList.add('hidden');
+        if (adminsSection) adminsSection.classList.remove('hidden');
+        loadTarunAdminsPanel();
+    } else {
+        if (moviesTabBtn) moviesTabBtn.classList.add('active');
+        if (adminsTabBtn) adminsTabBtn.classList.remove('active');
+        if (moviesSection) moviesSection.classList.remove('hidden');
+        if (adminsSection) adminsSection.classList.add('hidden');
+        loadAdminPanel();
+    }
+}
+
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(`${inputId}-icon`);
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        }
+    } else {
+        input.type = 'password';
+        if (icon) {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+}
+
+function toggleTextMask(elemId, actualText) {
+    const el = document.getElementById(elemId);
+    if (!el) return;
+    if (el.dataset.revealed === 'true') {
+        el.textContent = '••••••••';
+        el.dataset.revealed = 'false';
+    } else {
+        el.textContent = actualText;
+        el.dataset.revealed = 'true';
+    }
+}
+
 async function loadAdminPanel() {
     const list = document.getElementById('admin-movies-list');
-    list.innerHTML = '<p class="subtitle text-center">Loading database listings...</p>';
+    if (list) list.innerHTML = '<p class="subtitle text-center">Loading database listings...</p>';
 
     // Check if the currently logged in admin is Master Admin "Tarun"
     const isTarun = state.currentUser && state.currentUser.role === 'admin' && (state.currentUser.username || '').toLowerCase() === 'tarun';
-    const tarunPanel = document.getElementById('tarun-admins-panel');
-    if (tarunPanel) {
+    const adminsTabBtn = document.getElementById('admin-tab-btn-admins');
+    if (adminsTabBtn) {
         if (isTarun) {
-            tarunPanel.classList.remove('hidden');
-            loadTarunAdminsPanel();
+            adminsTabBtn.classList.remove('hidden');
         } else {
-            tarunPanel.classList.add('hidden');
+            adminsTabBtn.classList.add('hidden');
+            switchAdminTab('movies');
         }
     }
 
@@ -1647,6 +1715,7 @@ async function loadAdminPanel() {
         const movies = await apiRequest('/movies');
         state.movies = movies;
 
+        if (!list) return;
         if (movies.length === 0) {
             list.innerHTML = '<p class="subtitle text-center" style="padding: 40px 0;">No active movies in DB.</p>';
             return;
@@ -1675,21 +1744,22 @@ async function loadAdminPanel() {
 async function loadTarunAdminsPanel() {
     const container = document.getElementById('tarun-admins-list');
     if (!container) return;
-    container.innerHTML = '<p class="subtitle text-center" style="grid-column: 1 / -1; padding: 20px 0;"><i class="fa-solid fa-spinner fa-spin"></i> Loading authorized administrators...</p>';
+    container.innerHTML = '<p class="subtitle text-center" style="padding: 30px 0;"><i class="fa-solid fa-spinner fa-spin"></i> Loading authorized administrators...</p>';
 
     try {
         const username = state.currentUser ? state.currentUser.username : 'Tarun';
         const admins = await apiRequest(`/admins/overview?requester=${encodeURIComponent(username)}`);
 
         if (!admins || admins.length === 0) {
-            container.innerHTML = '<p class="subtitle text-center" style="grid-column: 1 / -1;">No other secondary administrators registered.</p>';
+            container.innerHTML = '<p class="subtitle text-center" style="padding: 30px 0;">No other secondary administrators registered.</p>';
             return;
         }
 
         container.innerHTML = '';
-        admins.forEach(adm => {
+        admins.forEach((adm, idx) => {
             const card = document.createElement('div');
             card.className = 'admin-detail-card';
+            const pwdId = `admin-pwd-val-${idx}`;
             card.innerHTML = `
                 <div class="admin-card-header">
                     <div class="admin-card-user-info">
@@ -1699,9 +1769,21 @@ async function loadTarunAdminsPanel() {
                             <div class="admin-card-role-title">${escapeHTML(adm.role || 'Administrator')}</div>
                         </div>
                     </div>
-                    <span class="admin-status-pill"><i class="fa-solid fa-circle-check"></i> ${escapeHTML(adm.status || 'Active')}</span>
+                    <div class="admin-card-actions-top">
+                        <span class="admin-status-pill"><i class="fa-solid fa-circle-check"></i> ${escapeHTML(adm.status || 'Active')}</span>
+                        <button class="btn btn-danger btn-xs" onclick="deleteAdminUser('${escapeHTML(adm.username)}')" title="Revoke Administrator Access">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="admin-detail-body">
+                    <div class="admin-info-item">
+                        <i class="fa-solid fa-key"></i>
+                        <span><strong>Password:</strong> <code id="${pwdId}" class="admin-pwd-text" data-revealed="false">••••••••</code>
+                        <button type="button" class="btn-reveal-pwd" onclick="toggleTextMask('${pwdId}', '${escapeHTML(adm.password || '')}')" title="Show/Hide Password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button></span>
+                    </div>
                     <div class="admin-info-item">
                         <i class="fa-solid fa-shield-halved"></i>
                         <span><strong>Privileges:</strong> ${escapeHTML(adm.access_level || 'System Access')}</span>
@@ -1709,10 +1791,6 @@ async function loadTarunAdminsPanel() {
                     <div class="admin-info-item">
                         <i class="fa-solid fa-envelope"></i>
                         <span><strong>Contact:</strong> ${escapeHTML(adm.email || 'internal@apexcinemas.com')}</span>
-                    </div>
-                    <div class="admin-info-item">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                        <span><strong>Last Active:</strong> ${escapeHTML(adm.last_login || 'Recently active')}</span>
                     </div>
                     <div class="admin-info-item">
                         <i class="fa-solid fa-id-badge"></i>
@@ -1723,8 +1801,75 @@ async function loadTarunAdminsPanel() {
             container.appendChild(card);
         });
     } catch (err) {
-        container.innerHTML = `<p class="subtitle text-center text-danger" style="grid-column: 1 / -1;"><i class="fa-solid fa-triangle-exclamation"></i> Error loading administrator details: ${escapeHTML(err.message)}</p>`;
+        container.innerHTML = `<p class="subtitle text-center text-danger" style="padding: 20px 0;"><i class="fa-solid fa-triangle-exclamation"></i> Error loading administrator details: ${escapeHTML(err.message)}</p>`;
     }
+}
+
+async function handleNewAdminSubmit(e) {
+    e.preventDefault();
+    const usernameInput = document.getElementById('new-admin-username').value.trim();
+    const passwordInput = document.getElementById('new-admin-password').value.trim();
+    const roleInput = document.getElementById('new-admin-role').value.trim();
+    const accessInput = document.getElementById('new-admin-access').value.trim();
+    const emailInput = document.getElementById('new-admin-email').value.trim();
+
+    if (!usernameInput || !passwordInput) {
+        showToast('Please provide an admin username and password.', 'error');
+        return;
+    }
+
+    try {
+        const payload = {
+            username: usernameInput,
+            password: passwordInput,
+            role: roleInput || 'System Administrator',
+            access_level: accessInput || 'Standard Cinema Operations',
+            email: emailInput || `${usernameInput.toLowerCase()}.admin@apexcinemas.com`,
+            requester: state.currentUser ? state.currentUser.username : 'Tarun'
+        };
+
+        const res = await apiRequest('/admins/create', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        showToast(res.message || `Administrator ${usernameInput} registered successfully!`, 'success');
+        
+        // Reset form
+        document.getElementById('new-admin-username').value = '';
+        document.getElementById('new-admin-password').value = '';
+        document.getElementById('new-admin-role').value = '';
+        document.getElementById('new-admin-access').value = '';
+        document.getElementById('new-admin-email').value = '';
+
+        // Reload admin list
+        loadTarunAdminsPanel();
+    } catch (err) {
+        showToast('Failed to create administrator: ' + err.message, 'error');
+    }
+}
+
+async function deleteAdminUser(username) {
+    if (!username) return;
+    openCustomConfirmModal({
+        title: 'Revoke Administrator Access',
+        message: `Are you sure you want to revoke admin privileges and delete administrator account "${username}"? They will no longer be able to log in.`,
+        confirmText: 'Yes, Revoke Access',
+        cancelText: 'Cancel',
+        type: 'danger',
+        onConfirm: async () => {
+            try {
+                const requester = state.currentUser ? state.currentUser.username : 'Tarun';
+                const res = await apiRequest(`/admins/${encodeURIComponent(username)}?requester=${encodeURIComponent(requester)}`, {
+                    method: 'DELETE'
+                });
+                showToast(res.message || `Administrator ${username} removed.`, 'success');
+                loadTarunAdminsPanel();
+            } catch (err) {
+                showToast('Failed to delete administrator: ' + err.message, 'error');
+            }
+        }
+    });
 }
 
 async function handleNewMovieSubmit(e) {

@@ -280,6 +280,49 @@ except main.HTTPException as e:
     rejected_anon = (e.status_code == 403)
 check("get_admins_overview('') rejected with 403 Forbidden", rejected_anon)
 
+# Test 3: Tarun can create a new administrator with password
+new_admin_req = main.CreateAdminRequest(
+    username="TestNewAdmin",
+    password="SecretPass@123",
+    role="Operations Supervisor",
+    access_level="Catalog & Seating Operations",
+    email="testadmin@apexcinemas.com",
+    requester="Tarun"
+)
+create_res = main.create_admin(new_admin_req)
+check("create_admin by Tarun succeeds", "created successfully" in create_res["message"])
+
+# Test 4: Newly created admin can log in with their set password
+new_login_req = main.AdminLogin(username="TestNewAdmin", password="SecretPass@123")
+login_res = main.login_admin(new_login_req)
+check("New admin can log in with set password", login_res["username"] == "TestNewAdmin")
+
+# Test 5: Non-Tarun user cannot create an administrator
+rejected_non_tarun_create = False
+try:
+    bad_create = main.CreateAdminRequest(
+        username="HackerAdmin",
+        password="HackPass@123",
+        role="Hacker",
+        requester="Vijay"
+    )
+    main.create_admin(bad_create)
+except main.HTTPException as e:
+    rejected_non_tarun_create = (e.status_code == 403)
+check("create_admin by non-Tarun rejected with 403 Forbidden", rejected_non_tarun_create)
+
+# Test 6: Tarun can delete the administrator
+del_admin_res = main.delete_admin("TestNewAdmin", requester="Tarun")
+check("delete_admin by Tarun succeeds", "removed successfully" in del_admin_res["message"])
+
+# Test 7: Deleted admin can no longer log in
+del_login_failed = False
+try:
+    main.login_admin(new_login_req)
+except main.HTTPException as e:
+    del_login_failed = (e.status_code == 401)
+check("Deleted admin login rejected with 401", del_login_failed)
+
 print("\n" + "=" * 70)
 print(f"  TEST SUMMARY: {TESTS_PASSED} PASSED | {TESTS_FAILED} FAILED")
 print("=" * 70)

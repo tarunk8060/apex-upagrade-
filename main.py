@@ -562,7 +562,7 @@ except Exception as e:
     print(f"DB init error: {e}")
 
 # ─────────────────────────────────────────────────────────────────
-# ADMIN CREDENTIALS
+# ADMIN CREDENTIALS & PERSISTENCE
 # ─────────────────────────────────────────────────────────────────
 ADMINS = {
     "Tarun": "tarun@80",
@@ -570,6 +570,49 @@ ADMINS = {
     "Ravi": "ravi!988",
     "Karthik": "karthik^9876"
 }
+
+def init_admins_table():
+    global ADMINS
+    try:
+        if not USE_POSTGRES:
+            import sqlite3
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS admin_users (
+                username TEXT PRIMARY KEY,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'Administrator',
+                access_level TEXT NOT NULL DEFAULT 'System Management',
+                email TEXT DEFAULT '',
+                badge TEXT DEFAULT 'Operations',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
+            defaults = [
+                ("Tarun", "tarun@80", "Master Administrator", "Full Superadmin Access & System Configuration", "tarun.master@apexcinemas.com", "Master Admin"),
+                ("Vijay", "vijay$45", "Senior Systems Administrator", "Full Movie Catalog, Pricing & Showtime Scheduler", "vijay.admin@apexcinemas.com", "Operations Lead"),
+                ("Ravi", "ravi!988", "Operations & Bookings Administrator", "Live Seat Bookings, User Ticket Cancellations & Audit Logs", "ravi.ops@apexcinemas.com", "Floor Supervisor"),
+                ("Karthik", "karthik^9876", "Screen & Seating Administrator", "Screen Specifications, IMAX 24-Col Setup & Capacity Config", "karthik.theatre@apexcinemas.com", "Technical Lead")
+            ]
+            for uname, pwd, role, access, email, badge in defaults:
+                cur.execute("""
+                INSERT OR IGNORE INTO admin_users (username, password, role, access_level, email, badge)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """, (uname, pwd, role, access, email, badge))
+            conn.commit()
+
+            cur.execute("SELECT username, password FROM admin_users")
+            for u, p in cur.fetchall():
+                ADMINS[u] = p
+            conn.close()
+    except Exception as e:
+        print(f"Error initializing admin_users table: {e}")
+
+try:
+    init_admins_table()
+except Exception as e:
+    print(f"init_admins_table error: {e}")
 
 # ─────────────────────────────────────────────────────────────────
 # PYDANTIC SCHEMAS
@@ -633,6 +676,14 @@ class UserResponse(BaseModel):
 class AdminLogin(BaseModel):
     username: str = Field(..., json_schema_extra={"example": "Tarun"})
     password: str = Field(..., json_schema_extra={"example": "tarun@80"})
+
+class CreateAdminRequest(BaseModel):
+    username: str = Field(..., json_schema_extra={"example": "Suresh"})
+    password: str = Field(..., json_schema_extra={"example": "suresh@123"})
+    role: Optional[str] = Field("Operations Administrator", json_schema_extra={"example": "Operations Administrator"})
+    access_level: Optional[str] = Field("Movie & Booking Operations", json_schema_extra={"example": "Full Catalog Access"})
+    email: Optional[str] = Field("", json_schema_extra={"example": "suresh.admin@apexcinemas.com"})
+    requester: str = Field(..., json_schema_extra={"example": "Tarun"})
 
 # ─────────────────────────────────────────────────────────────────
 # SEAT HELPERS
@@ -1323,44 +1374,138 @@ def login_admin(admin: AdminLogin):
 
 # 12. Master Admin Overview (Restricted strictly to Tarun)
 @app.get("/admins/overview")
-def get_admins_overview(requester: str = ""):
+def get_admins_overview(requester: str = "", db=Depends(get_db)):
     if requester.strip().lower() != "tarun":
         raise HTTPException(
             status_code=403,
             detail="Access restricted: Only Master Administrator 'Tarun' is authorized to view administrator details."
         )
     
-    # Return profile and access details of all other administrators
-    other_admins = [
-        {
-            "username": "Vijay",
-            "role": "Senior Systems Administrator",
-            "status": "Active",
-            "access_level": "Full Movie Catalog, Pricing & Showtime Scheduler",
-            "email": "vijay.admin@apexcinemas.com",
-            "badge": "Operations Lead",
-            "last_login": "Today at 02:15 PM"
-        },
-        {
-            "username": "Ravi",
-            "role": "Operations & Bookings Administrator",
-            "status": "Active",
-            "access_level": "Live Seat Bookings, User Ticket Cancellations & Audit Logs",
-            "email": "ravi.ops@apexcinemas.com",
-            "badge": "Floor Supervisor",
-            "last_login": "Today at 11:40 AM"
-        },
-        {
-            "username": "Karthik",
-            "role": "Screen & Seating Administrator",
-            "status": "Active",
-            "access_level": "Screen Specifications, IMAX 24-Col Setup & Capacity Config",
-            "email": "karthik.theatre@apexcinemas.com",
-            "badge": "Technical Lead",
-            "last_login": "Yesterday at 05:20 PM"
-        }
-    ]
-    return other_admins
+    close_db = False
+    if not hasattr(db, "cursor"):
+        if USE_POSTGRES:
+            import psycopg2
+            db = psycopg2.connect(DATABASE_URL)
+        else:
+            import sqlite3
+            db = sqlite3.connect(DB_PATH)
+            db.row_factory = lowercase_dict_factory
+        close_db = True
+
+    try:
+        cursor = get_cursor(db)
+        ph = "%s" if USE_POSTGRES else "?"
+        cursor.execute(f"SELECT username, password, role, access_level, email, badge, created_at FROM admin_users WHERE LOWER(username) != 'tarun' ORDER BY created_at ASC")
+        rows = cursor.fetchall()
+
+        result = []
+        for r in rows:
+            result.append({
+                "username": r["username"] if "username" in r else r[0],
+                "password": r["password"] if "password" in r else r[1],
+                "role": r["role"] if "role" in r else r[2],
+                "access_level": r["access_level"] if "access_level" in r else r[3],
+                "email": r["email"] if "email" in r else r[4],
+                "badge": r["badge"] if "badge" in r else r[5],
+                "status": "Active"
+            })
+        return result
+    finally:
+        if close_db:
+            try:
+                db.close()
+            except Exception:
+                pass
+
+# 13. Create New Administrator (Restricted strictly to Tarun)
+@app.post("/admins/create", status_code=status.HTTP_201_CREATED)
+def create_admin(req: CreateAdminRequest, db=Depends(get_db)):
+    if req.requester.strip().lower() != "tarun":
+        raise HTTPException(status_code=403, detail="Access denied: Only Master Admin Tarun can add administrators.")
+    
+    uname = req.username.strip()
+    pwd = req.password.strip()
+    if not uname or not pwd:
+        raise HTTPException(status_code=400, detail="Administrator username and password are required.")
+    
+    if len(pwd) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters long.")
+
+    close_db = False
+    if not hasattr(db, "cursor"):
+        if USE_POSTGRES:
+            import psycopg2
+            db = psycopg2.connect(DATABASE_URL)
+        else:
+            import sqlite3
+            db = sqlite3.connect(DB_PATH)
+            db.row_factory = lowercase_dict_factory
+        close_db = True
+
+    try:
+        cursor = get_cursor(db)
+        ph = "%s" if USE_POSTGRES else "?"
+        cursor.execute(f"SELECT username FROM admin_users WHERE LOWER(username) = LOWER({ph})", (uname,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail=f"Administrator '{uname}' already exists.")
+
+        email = req.email.strip() or f"{uname.lower()}.admin@apexcinemas.com"
+        role = req.role.strip() or "System Administrator"
+        access = req.access_level.strip() or "General Cinema & Showtime Operations"
+
+        cursor.execute(
+            f"INSERT INTO admin_users (username, password, role, access_level, email, badge) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})",
+            (uname, pwd, role, access, email, "Staff Admin")
+        )
+        db.commit()
+
+        # Sync in-memory credentials dict
+        ADMINS[uname] = pwd
+
+        return {"message": f"Administrator '{uname}' created successfully.", "username": uname}
+    finally:
+        if close_db:
+            try:
+                db.close()
+            except Exception:
+                pass
+
+# 14. Delete Administrator (Restricted strictly to Tarun)
+@app.delete("/admins/{username}")
+def delete_admin(username: str, requester: str = "", db=Depends(get_db)):
+    if requester.strip().lower() != "tarun":
+        raise HTTPException(status_code=403, detail="Access denied: Only Master Admin Tarun can delete administrators.")
+    if username.strip().lower() == "tarun":
+        raise HTTPException(status_code=400, detail="Cannot delete Master Administrator Tarun.")
+    
+    close_db = False
+    if not hasattr(db, "cursor"):
+        if USE_POSTGRES:
+            import psycopg2
+            db = psycopg2.connect(DATABASE_URL)
+        else:
+            import sqlite3
+            db = sqlite3.connect(DB_PATH)
+            db.row_factory = lowercase_dict_factory
+        close_db = True
+
+    try:
+        cursor = get_cursor(db)
+        ph = "%s" if USE_POSTGRES else "?"
+        cursor.execute(f"DELETE FROM admin_users WHERE LOWER(username) = LOWER({ph})", (username,))
+        db.commit()
+
+        for k in list(ADMINS.keys()):
+            if k.lower() == username.lower():
+                del ADMINS[k]
+
+        return {"message": f"Administrator '{username}' removed successfully."}
+    finally:
+        if close_db:
+            try:
+                db.close()
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     import uvicorn

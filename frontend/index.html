@@ -13,7 +13,7 @@
         rel="stylesheet">
     <!-- FontAwesome for cinematic iconography -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
 </head>
 
 <body class="dark-theme">
@@ -106,6 +106,9 @@
                 <span class="highlight">APEX</span> CINEMAS
             </div>
             <div class="mobile-nav-actions">
+                <button id="mobile-nav-admin" class="mobile-nav-admin-btn hidden-admin" onclick="showView('admin')" title="Admin Dashboard" aria-label="Admin Dashboard">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
                 <button class="mobile-theme-btn" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle Theme">
                     <i class="fa-solid fa-circle-half-stroke" id="mobile-theme-icon"></i>
                 </button>
@@ -186,10 +189,6 @@
                     <div class="carousel-slide fade">
                         <img src="https://res.cloudinary.com/mrfnjg37/image/upload/f_auto,q_auto/image_7cffa155_kzzyae"
                             alt="Featured Slide 4">
-                    </div>
-                    <div class="carousel-overlay-badge">
-                        <span class="carousel-live-pill"><i class="fa-solid fa-circle-play"></i> NOW SHOWING</span>
-                        <span class="carousel-experience-text">APEX CINEMAS • IMMERSIVE SURROUND & 4K LASER</span>
                     </div>
                 </div>
 
@@ -433,12 +432,23 @@
 
             <!-- 4. ADMIN PANEL VIEW -->
             <section id="view-admin" class="app-view">
-                <div class="view-header">
+                <div class="view-header view-header-left">
                     <h2>Admin Management Panel</h2>
-                    <p class="subtitle">Add, delete, and control movie catalogs in real-time</p>
+                    <p class="subtitle">Real-time control over movies, showtimes, and administrator access</p>
                 </div>
 
-                <div class="admin-grid-layout">
+                <!-- Admin Section Navigation Tabs -->
+                <div class="admin-tab-bar" id="admin-tab-bar">
+                    <button id="admin-tab-btn-movies" class="admin-tab-item active" onclick="switchAdminTab('movies')">
+                        <i class="fa-solid fa-film"></i> Movie Catalog
+                    </button>
+                    <button id="admin-tab-btn-admins" class="admin-tab-item hidden" onclick="switchAdminTab('admins')">
+                        <i class="fa-solid fa-user-shield"></i> System Administrators <span class="badge-pill-tarun">Tarun Only</span>
+                    </button>
+                </div>
+
+                <!-- Section A: Movie Management Grid -->
+                <div id="admin-section-movies" class="admin-grid-layout">
                     <!-- Left: Add movie card -->
                     <div class="admin-card glass-panel">
                         <div class="panel-accent-bar accent-blue"></div>
@@ -497,22 +507,67 @@
                             <!-- Loaded dynamically via app.js -->
                         </div>
                     </div>
+                </div>
 
-                    <!-- 3. Tarun Master Admin: Other Administrators Panel (Visible ONLY to Tarun) -->
-                    <div id="tarun-admins-panel" class="admin-card glass-panel hidden" style="grid-column: 1 / -1;">
+                <!-- Section B: Dedicated Admins Management (Visible ONLY to Tarun) -->
+                <div id="admin-section-admins" class="admin-grid-layout hidden">
+                    <!-- Left: Add New Admin Form -->
+                    <div class="admin-card glass-panel">
                         <div class="panel-accent-bar accent-purple"></div>
-                        <div class="admin-panel-top-flex">
-                            <div>
-                                <h3 class="panel-title"><i class="fa-solid fa-user-shield"></i> Authorized System Administrators</h3>
-                                <p class="panel-subtitle">Access restricted to Master Admin Tarun — Real-time overview of active system administrators and access privileges</p>
-                            </div>
-                            <span class="badge-role-tarun"><i class="fa-solid fa-crown"></i> Master Admin Access</span>
+                        <div class="panel-header-flex">
+                            <h3 class="panel-title"><i class="fa-solid fa-user-plus"></i> Add New Administrator</h3>
+                            <span class="badge-role-tarun"><i class="fa-solid fa-crown"></i> Tarun Access</span>
                         </div>
-                        <div id="tarun-admins-list" class="admins-details-grid">
-                            <!-- Populated dynamically via app.js -->
+                        <p class="panel-subtitle" style="margin-bottom: 16px;">Create a secondary administrator and set their login credentials</p>
+
+                        <form onsubmit="handleNewAdminSubmit(event)">
+                            <div class="form-group">
+                                <label class="admin-form-label" for="new-admin-username">Admin Username</label>
+                                <input type="text" id="new-admin-username" placeholder="Username (e.g. Suresh)" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="admin-form-label" for="new-admin-password">Admin Password</label>
+                                <div class="password-input-wrap">
+                                    <input type="password" id="new-admin-password" placeholder="Set Password (min 4 characters)" required minlength="4">
+                                    <button type="button" class="btn-toggle-pass" onclick="togglePasswordVisibility('new-admin-password')">
+                                        <i class="fa-solid fa-eye" id="new-admin-password-icon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="admin-form-label" for="new-admin-role">System Role / Department</label>
+                                <input type="text" id="new-admin-role" placeholder="Role (e.g. Operations Administrator)" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="admin-form-label" for="new-admin-access">Access Privileges</label>
+                                <input type="text" id="new-admin-access" placeholder="Privileges (e.g. Full Catalog, Pricing & Showtimes)" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="admin-form-label" for="new-admin-email">Admin Email (Optional)</label>
+                                <input type="email" id="new-admin-email" placeholder="e.g. suresh.admin@apexcinemas.com">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i class="fa-solid fa-user-check"></i> Register Administrator
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Right: Authorized Admins List -->
+                    <div class="admin-card glass-panel">
+                        <div class="panel-accent-bar accent-purple"></div>
+                        <div class="panel-header-flex">
+                            <h3 class="panel-title"><i class="fa-solid fa-users-gear"></i> Active Administrators</h3>
+                            <button class="btn btn-secondary btn-sm" onclick="loadTarunAdminsPanel()" title="Refresh List">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                        <p class="panel-subtitle" style="margin-bottom: 16px;">Overview of secondary administrators authorized on the APEX platform</p>
+                        <div id="tarun-admins-list" class="admins-details-vertical-list">
+                            <!-- Loaded dynamically via app.js -->
                         </div>
                     </div>
                 </div>
+            </section>
             </section>
 
         </main>
@@ -625,7 +680,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=8"></script>
 </body>
 
 </html>
